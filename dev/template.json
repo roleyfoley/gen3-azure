@@ -70,7 +70,7 @@
             "type": "Microsoft.Network/networkSecurityGroups",
             "apiVersion": "2019-04-01",
             "name": "[parameters('networkSecurityGroups_name')]",
-            "location": "eastus",
+            "location": "[resourceGroup().location]",
             "properties": {
                 "securityRules": [
                     {
@@ -207,7 +207,7 @@
             "type": "Microsoft.Network/publicIPAddresses",
             "apiVersion": "2019-04-01",
             "name": "[parameters('publicIPAddresses_name')]",
-            "location": "eastus",
+            "location": "[resourceGroup().location]",
             "sku": {
                 "name": "Basic",
                 "tier": "Regional"
@@ -222,7 +222,7 @@
             "type": "Microsoft.Network/virtualNetworks",
             "apiVersion": "2019-04-01",
             "name": "[parameters('virtualNetworks_name')]",
-            "location": "eastus",
+            "location": "[resourceGroup().location]",
             "properties": {
                 "addressSpace": {
                     "addressPrefixes": [
@@ -252,7 +252,7 @@
             "type": "Microsoft.Compute/virtualMachines",
             "apiVersion": "2019-03-01",
             "name": "[parameters('virtualMachines_name')]",
-            "location": "eastus",
+            "location": "[resourceGroup().location]",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaces_name'))]"
             ],
@@ -360,7 +360,7 @@
             "type": "Microsoft.Storage/storageAccounts",
             "apiVersion": "2019-04-01",
             "name": "[parameters('storageAccounts_name')]",
-            "location": "eastus",
+            "location": "[resourceGroup().location]",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworks_name'), 'default')]"
             ],
