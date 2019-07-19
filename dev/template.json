@@ -59,11 +59,25 @@
             "metadata": {
               "description": "A new GUID used to identify the role assignment"
             }
+        },
+        "virtualMachinesExtensions_scriptsPath": {
+            "type": "string",
+            "metadata": {
+                "description": "The path to scripts that are to be run on the VM post-deployment."
+            }
+        },
+        "virtualMachinesExtensions_commandToExecute": {
+            "type": "string",
+            "metadata": {
+                "description": "The command that you wish to execute (generally the command that will run your script)."
+            }
         }
     },
     "variables": {
         "Storage Account Contributor": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/',  '17d1049b-9a84-46fb-8f53-869881c3d3ab')]",
-        "scope": "[resourceGroup().id]"
+        "scope": "[resourceGroup().id]",
+        "virtualMachinesExtensions_name": "[concat(parameters('virtualMachines_name'), '/bootstrap')]",
+        "virtualMachinesExtensions_script": "bootstrap.sh"
     },
     "resources": [
         {
@@ -303,6 +317,27 @@
                         }
                     ]
                 }
+            }
+        },
+        {
+            "name": "[variables('virtualMachinesExtensions_name')]",
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "apiVersion": "2019-03-01",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', parameters('virtualMachines_name'))]"
+            ],
+            "properties": {
+              "publisher": "Microsoft.Azure.Extensions",
+              "type": "CustomScript",
+              "typeHandlerVersion": "2.0",
+              "autoUpgradeMinorVersion": true,
+              "settings": {
+                "fileUris": [
+                  "[concat(parameters('virtualMachinesExtensions_scriptsPath'), '/', variables('virtualMachinesExtensions_script'))]"
+                ],
+                "commandToExecute": "[concat(parameters('virtualMachinesExtensions_commandToExecute'), ' ', uniqueString(resourceGroup().id))]"
+              }
             }
         },
         {
