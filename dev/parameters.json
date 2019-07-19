@@ -6,10 +6,10 @@
             "value": "Storage Account Contributor"
         },
         "virtualMachines_adminName": {
-            "value": "admin"
+            "value": "development"
         },
         "virtualMachines_publicKeyPath": {
-            "value": "/home/admin/.ssh/authorized_keys"
+            "value": "/home/development/.ssh/authorized_keys"
         },
         "virtualMachines_publicKeyData": {
             "value": ""
