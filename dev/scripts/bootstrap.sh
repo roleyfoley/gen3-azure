@@ -1,3 +1,7 @@
+#!/usr/bin/env bash
+
+# This script is intended for use as a proof-of-concept for ARM template bootstrap scripts only.
+
 # Install Az CLI
 curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
 
@@ -8,4 +12,4 @@ touch ~/myfile.txt
 az login --identity
 
 # Upload the new file to Blob Storage to verify that the system-managed idenity is correct.
-az storage blob upload --container-name blobcontainer --file ~/myfile.txt --name "blobby07" --account-name storage<insert rand>
+az storage blob upload --container-name blobcontainer --file ~/myfile.txt --name "blobby07" --account-name "storage$1"
