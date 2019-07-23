@@ -12,4 +12,4 @@ touch ~/myfile.txt
 az login --identity
 
 # Upload the new file to Blob Storage to verify that the system-managed idenity is correct.
-az storage blob upload --container-name blobcontainer --file ~/myfile.txt --name "blobby07" --account-name "storage$1"
+az storage blob upload --container-name blobcontainer --file ~/myfile.txt --name "blobby007" --account-name $1
