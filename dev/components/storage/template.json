@@ -93,7 +93,6 @@
                 "publicAccess": "Container"
             }
         }
-<<<<<<< HEAD
     ],
     "outputs": {
         "storageAccountName": {
@@ -101,7 +100,4 @@
             "value": "[variables('storageAccount').name]"
         }
     }
-=======
-    ]
->>>>>>> b3b487264bcdd93b5a12a78ff76ee28b3d6836fa
 }

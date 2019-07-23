@@ -110,16 +110,8 @@ $outputs.Keys | ForEach-Object {
 
 # Example using parameter object from outputs of first template.
 Write-Host "Starting deployment of storage component...";
-<<<<<<< HEAD
 $outputs = (New-AzResourceGroupDeployment -ResourceGroupName $resourceGroupName -Name $deploymentName -TemplateFile "$($components.storage)\template.json" -TemplateParameterObject $parameterObject).Outputs
 
 # Example of overloading the parameter file with extra parameter.
 Write-Host "Starting deployment of virtualmachine component...";
 New-AzResourceGroupDeployment -ResourceGroupName $resourceGroupName -Name $deploymentName -TemplateFile "$($components.virtualmachines)\template.json" -TemplateParameterFile "$($components.virtualmachines)\testparameters.json" -subnetId $parameterObject["subnetId"] -storageAccountName $outputs["storageAccountName"].Value
-=======
-New-AzResourceGroupDeployment -ResourceGroupName $resourceGroupName -Name $deploymentName -TemplateFile "$($components.storage)\template.json" -TemplateParameterObject $parameterObject
-
-# Example of overloading the parameter file with extra parameter.
-Write-Host "Starting deployment of virtualmachine component...";
-New-AzResourceGroupDeployment -ResourceGroupName $resourceGroupName -Name $deploymentName -TemplateFile "$($components.virtualmachines)\template.json" -TemplateParameterFile "$($components.virtualmachines)\testparameters.json" -subnetId $outputs.subnetId.Value
->>>>>>> b3b487264bcdd93b5a12a78ff76ee28b3d6836fa
