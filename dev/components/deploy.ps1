@@ -1,57 +1,71 @@
 <#
- .SYNOPSIS
-    Deploys a template to Azure
+    .SYNOPSIS
+        Deploys a template to Azure
 
- .DESCRIPTION
-    Deploys an Azure Resource Manager template
+    .DESCRIPTION
+        Deploys an Azure Resource Manager template
 
- .PARAMETER subscriptionId
-    The subscription id where the template will be deployed.
+    .PARAMETER subscriptionId
+        The subscription id where the template will be deployed.
 
- .PARAMETER resourceGroupName
-    The resource group where the template will be deployed. Can be the name of an existing or a new resource group.
+    .PARAMETER resourceGroupName
+        The resource group where the template will be deployed. Can be the name of an existing or a new resource group.
 
- .PARAMETER resourceGroupLocation
-    Optional, a resource group location. If specified, will try to create a new resource group in this location. If not specified, assumes resource group is existing.
+    .PARAMETER resourceGroupLocation
+        Optional, a resource group location. If specified, will try to create a new resource group in this location. If not specified, assumes resource group is existing.
 
- .PARAMETER deploymentName
-    The deployment name.
+    .PARAMETER deploymentName
+        The deployment name.
 
- .PARAMETER templateFilePath
-    Optional, path to the template file. Defaults to template.json.
-
- .PARAMETER parametersFilePath
-    Optional, path to the parameters file. Defaults to parameters.json. If file is not found, will prompt for parameter values based on template.
+    .PARAMETER resourceProviders
+        The Resource Provider namespaces that will be utilised during resource deployment.
 #>
-
+[CmdletBinding()]
 param(
- [Parameter(Mandatory=$True)]
- [string]
- $subscriptionId,
+    [Parameter(Mandatory=$True)]
+    [string]
+    $subscriptionId,
 
- [Parameter(Mandatory=$True)]
- [string]
- $resourceGroupName,
+    [Parameter(Mandatory=$True)]
+    [string]
+    $resourceGroupName,
 
- [string]
- $resourceGroupLocation,
+    [string]
+    $resourceGroupLocation,
 
- [Parameter(Mandatory=$True)]
- [string]
- $deploymentName
+    [Parameter(Mandatory=$True)]
+    [string]
+    $deploymentName,
+
+    [string[]]
+    $resourceProviders = @(
+        'microsoft.network',
+        'microsoft.compute',
+        'microsoft.devtestlab',
+        'microsoft.storage'
+    )
 )
 
 <#
 .SYNOPSIS
-    Registers RPs
+    Registers Resource Providers if required.
 #>
 Function RegisterRP {
     Param(
         [string]$ResourceProviderNamespace
     )
 
-    Write-Host "Registering resource provider '$ResourceProviderNamespace'";
-    Register-AzResourceProvider -ProviderNamespace $ResourceProviderNamespace;
+    $reg = Get-AzResourceProvider -ListAvailable | Where-Object { 
+        $_.ProviderNamespace -eq $ResourceProviderNamespace 
+    }
+
+    if($reg.RegistrationState -ne "Registered"){
+        Write-Output "Registering resource provider '$ResourceProviderNamespace'"
+        Register-AzResourceProvider -ProviderNamespace $ResourceProviderNamespace
+    }
+    else {
+        Write-Output "Resource provider '$resourceProviderNamespace' is already registered."
+    }
 }
 
 #******************************************************************************
@@ -66,20 +80,29 @@ $components = @{
     "virtualmachines" = "$PSScriptRoot\virtualmachines"
 }
 
-# sign in
-Write-Host "Logging in...";
-Login-AzAccount;
+# sign in if necessary
+$currentAzContext = Get-AzContext
+if ([string]::IsNullOrEmpty($currentAzContext).Account){
+    Write-Output "No existing Azure context found. Requires login...";
+    Login-AzAccount
+} 
+else {
+    Write-Output "Currently logged in as: $($currentAzContext.Account)"
+    Write-Output "Subscription:           $($currentAzContext.SubscriptionName)"
+    Write-Output "Environment:            $($currentAzContext.Environment)"
+}
+
+
 
 # select subscription
-Write-Host "Selecting subscription '$subscriptionId'";
+Write-Output "Selecting subscription '$subscriptionId'";
 Select-AzSubscription -SubscriptionID $subscriptionId;
 
 # Register RPs
-$resourceProviders = @("microsoft.network","microsoft.compute","microsoft.devtestlab","microsoft.storage");
 if($resourceProviders.length) {
-    Write-Host "Registering resource providers"
+    Write-Output "Starting Resource Provider check..."
     foreach($resourceProvider in $resourceProviders) {
-        RegisterRP($resourceProvider);
+        RegisterRP -ResourceProviderNamespace $resourceProvider
     }
 }
 
@@ -87,20 +110,26 @@ if($resourceProviders.length) {
 $resourceGroup = Get-AzResourceGroup -Name $resourceGroupName -ErrorAction SilentlyContinue
 if(!$resourceGroup)
 {
-    Write-Host "Resource group '$resourceGroupName' does not exist. To create a new resource group, please enter a location.";
+    Write-Output "Resource group '$resourceGroupName' does not exist. Creating..."
     if(!$resourceGroupLocation) {
+        Write-Output "To create a new resource group, please enter a location."
         $resourceGroupLocation = Read-Host "resourceGroupLocation";
     }
-    Write-Host "Creating resource group '$resourceGroupName' in location '$resourceGroupLocation'";
+    Write-Output "Creating resource group '$resourceGroupName' in location '$resourceGroupLocation'";
     New-AzResourceGroup -Name $resourceGroupName -Location $resourceGroupLocation
 }
 else{
-    Write-Host "Using existing resource group '$resourceGroupName'";
+    Write-Output "Using existing resource group '$resourceGroupName'";
 }
 
 # Perform deployment and store the outputs
-Write-Host "Starting deployment of network component...";
-$outputs = (New-AzResourceGroupDeployment -ResourceGroupName $resourceGroupName -Name $deploymentName -TemplateFile "$($components.network)\template.json" -TemplateParameterFile "$($components.network)\testparameters.json").outputs
+Write-Output "Starting deployment of network component..."
+$outputs = (
+    New-AzResourceGroupDeployment `
+        -ResourceGroupName $resourceGroupName `
+        -Name $deploymentName `
+        -TemplateFile "$($components.network)\template.json" `
+        -TemplateParameterFile "$($components.network)\testparameters.json").outputs
 
 # Format the output for the next template.
 $parameterObject = @{}
@@ -109,9 +138,22 @@ $outputs.Keys | ForEach-Object {
 }
 
 # Example using parameter object from outputs of first template.
-Write-Host "Starting deployment of storage component...";
-$outputs = (New-AzResourceGroupDeployment -ResourceGroupName $resourceGroupName -Name $deploymentName -TemplateFile "$($components.storage)\template.json" -TemplateParameterObject $parameterObject).Outputs
+Write-Output "Starting deployment of storage component...";
+$outputs = (
+    New-AzResourceGroupDeployment `
+        -ResourceGroupName $resourceGroupName `
+        -Name $deploymentName `
+        -TemplateFile "$($components.storage)\template.json" `
+        -TemplateParameterObject $parameterObject).Outputs
 
 # Example of overloading the parameter file with extra parameter.
-Write-Host "Starting deployment of virtualmachine component...";
-New-AzResourceGroupDeployment -ResourceGroupName $resourceGroupName -Name $deploymentName -TemplateFile "$($components.virtualmachines)\template.json" -TemplateParameterFile "$($components.virtualmachines)\testparameters.json" -subnetId $parameterObject["subnetId"] -storageAccountName $outputs["storageAccountName"].Value
+Write-Output "Starting deployment of virtualmachine component...";
+New-AzResourceGroupDeployment `
+    -ResourceGroupName $resourceGroupName `
+    -Name $deploymentName `
+    -TemplateFile "$($components.virtualmachines)\template.json" `
+    -TemplateParameterFile "$($components.virtualmachines)\testparameters.json" `
+    -subnetId $parameterObject["subnetId"] `
+    -storageAccountName $outputs["storageAccountName"].Value
+
+Write-Output "Script successful."
