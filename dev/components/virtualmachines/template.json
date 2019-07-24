@@ -224,7 +224,7 @@
             "properties": {
               "roleDefinitionId": "[variables('rbac').role[parameters('rbacRoleName')]]",
               "principalId": "[reference(concat('Microsoft.Compute/virtualMachines/', variables('vm').name), '2019-03-01', 'Full').identity.principalId]",
-              "scope": "[resourceGroup().id]"
+              "scope": "[subscription().id]"
             }
         },
         {
