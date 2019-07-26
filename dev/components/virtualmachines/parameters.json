@@ -2,22 +2,25 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "virtualMachinesRBACRole_name": {
+        "publicKey": {
             "value": ""
         },
-        "virtualMachines_adminName": {
+        "scriptsPath": {
             "value": ""
         },
-        "virtualMachines_publicKeyPath": {
+        "scriptName": {
             "value": ""
         },
-        "virtualMachines_publicKeyData": {
+        "scriptsCommand": {
             "value": ""
         },
-        "virtualMachinesExtensions_scriptsPath": {
+        "subnetId": {
             "value": ""
         },
-        "virtualMachinesExtensions_commandToExecute": {
+        "vmIdentityName": {
+            "value": ""
+        },
+        "vmIdentityResourceGroup": {
             "value": ""
         }
     }

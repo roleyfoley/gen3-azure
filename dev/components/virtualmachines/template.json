@@ -1,0 +1,262 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "componentName": {
+            "defaultValue": "vm",
+            "type": "string",
+            "metadata": {
+                "description": "The name to give to this component."
+            }
+        },
+        "accountName": {
+            "defaultValue": "development",
+            "type": "string",
+            "metadata": {
+                "description": "The local administrator account on the virtual machine."
+            }
+        },
+        "publicKey": {
+            "type": "string",
+            "metadata": {
+                "description": "The SSH public key data to install on the virtual machine."
+            }
+        },
+        "scriptsPath":{
+            "type": "string",
+            "metadata": {
+                "description": "The path/uri to the CustomScripts you wish to download and execute."
+            }
+        },
+        "scriptName": {
+            "type": "string",
+            "metadata": {
+                "description": "The filename and extension of the script you wish to execute."
+            }
+        },
+        "scriptsCommand": {
+            "type": "string",
+            "metadata": {
+                "description": "The command you wish to use to execute your CustomScripts."
+            }
+        },
+        "subnetId": {
+            "type": "string"
+        },
+        "storageAccountName": {
+            "type": "string"
+        },
+        "vmIdentityName": {
+            "type": "string"
+        },
+        "vmIdentityResourceGroup": {
+            "type": "string"
+        }
+    },
+    "variables": {
+        "unique": {
+            "string": {
+                "short": "[take(uniqueString(resourceGroup().id), 4)]",
+                "long":  "[uniqueString(resourceGroup().id)]"
+            }
+        },
+        "vm": {
+            "name": "[concat(parameters('componentName'), '-vm-', variables('unique').string.short)]",
+            "id": "[resourceId('Microsoft.Compute/virtualMachines', concat(parameters('componentName'), '-vm-', variables('unique').string.short))]",
+            "publicKey": {
+                "path": "[concat('/home/', parameters('accountName'), '/.ssh/authorized_keys')]",
+                "data": "[parameters('publicKey')]"
+            },
+            "os": {
+                "accountName": "[parameters('accountName')]"
+            }
+        },
+        "nsg": {
+            "name" : "[concat(parameters('componentName'), '-nsg-', variables('unique').string.short)]"
+        },
+        "pip": {
+            "name" : "[concat(parameters('componentName'), '-pip-', variables('unique').string.short)]"
+        },
+        "osdisk": {
+            "name" : "[concat(parameters('componentName'), '-vm-disk-', variables('unique').string.short)]"
+        },
+        "nic": {
+            "name" : "[concat(parameters('componentName'), '-nic-', variables('unique').string.short)]",
+            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('componentName'), '-nic-', variables('unique').string.short))]",
+            "ipConfig": {
+                "name": "[concat(parameters('componentName'), '-nic-ipconfig-', variables('unique').string.short)]",
+                "subnet": {
+                    "id": "[parameters('subnetId')]"
+                }
+            }
+        },
+        "extension": {
+            "name" : "[concat(parameters('componentName'), '-vm-', variables('unique').string.short, '/bootstrap')]",
+            "scripts": {
+                "uri": "[concat(parameters('scriptsPath'), '/', parameters('scriptName'))]",
+                "cmd": "[concat(parameters('scriptsCommand'), ' ', variables('storage').name)]"
+            }
+        },
+        "storage": {
+            "name": "[parameters('storageAccountName')]"
+        }
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Network/publicIPAddresses",
+            "apiVersion": "2019-04-01",
+            "name": "[variables('pip').name]",
+            "location": "[resourceGroup().location]",
+            "sku": {
+                "name": "Basic",
+                "tier": "Regional"
+            },
+            "properties": {
+                "publicIPAddressVersion": "IPv4",
+                "publicIPAllocationMethod": "Dynamic",
+                "idleTimeoutInMinutes": 4
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2019-04-01",
+            "name": "[variables('nsg').name]",
+            "location": "[resourceGroup().location]",
+            "properties": {}
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2019-03-01",
+            "name": "[variables('vm').name]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[variables('nic').id]"
+            ],
+            "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                    "[resourceID(parameters('vmIdentityResourceGroup'),'Microsoft.ManagedIdentity/userAssignedIdentities/', parameters('vmIdentityName'))]": {}
+                }
+            },
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "Standard_B1s"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "Canonical",
+                        "offer": "UbuntuServer",
+                        "sku": "18.04-LTS",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "osType": "Linux",
+                        "name": "[variables('osdisk').name]",
+                        "createOption": "FromImage",
+                        "caching": "ReadWrite",
+                        "managedDisk": {
+                            "storageAccountType": "Standard_LRS"
+                        },
+                        "diskSizeGB": 30
+                    }
+                },
+                "osProfile": {
+                    "computerName": "[variables('vm').name]",
+                    "adminUsername": "[variables('vm').os.accountName]",
+                    "linuxConfiguration": {
+                        "disablePasswordAuthentication": true,
+                        "ssh": {
+                            "publicKeys": [
+                                {
+                                    "path": "[variables('vm').publicKey.path]",
+                                    "keyData": "[variables('vm').publicKey.data]"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[variables('nic').id]"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "name": "[variables('extension').name]",
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "apiVersion": "2019-03-01",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[variables('vm').id]"
+            ],
+            "properties": {
+              "publisher": "Microsoft.Azure.Extensions",
+              "type": "CustomScript",
+              "typeHandlerVersion": "2.0",
+              "autoUpgradeMinorVersion": true,
+              "settings": {
+                "fileUris": [
+                  "[variables('extension').scripts.uri]"
+                ],
+                "commandToExecute": "[variables('extension').scripts.cmd]"
+              }
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+            "apiVersion": "2019-04-01",
+            "name": "[concat(variables('nsg').name, '/SSH')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsg').name)]"
+            ],
+            "properties": {
+                "protocol": "TCP",
+                "sourcePortRange": "*",
+                "destinationPortRange": "22",
+                "sourceAddressPrefix": "*",
+                "destinationAddressPrefix": "*",
+                "access": "Allow",
+                "priority": 300,
+                "direction": "Inbound"
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2019-04-01",
+            "name": "[variables('nic').name]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', variables('pip').name)]",
+                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsg').name)]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "[variables('nic').ipConfig.name]",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('pip').name)]"
+                            },
+                            "subnet": {
+                                "id": "[variables('nic').ipConfig.subnet.id]"
+                            },
+                            "primary": true,
+                            "privateIPAddressVersion": "IPv4"
+                        }
+                    }
+                ],
+                "enableAcceleratedNetworking": false,
+                "enableIPForwarding": false,
+                "networkSecurityGroup": {
+                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsg').name)]"
+                },
+                "primary": true
+            }
+        }
+    ],
+    "outputs": {}
+}
