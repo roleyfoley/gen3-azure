@@ -14,10 +14,13 @@
         "scriptsCommand": {
             "value": ""
         },
-        "rbacRoleName": {
-            "value": "Storage Account Contributor"
-        },
         "subnetId": {
+            "value": ""
+        },
+        "vmIdentityName": {
+            "value": ""
+        },
+        "vmIdentityResourceGroup": {
             "value": ""
         }
     }

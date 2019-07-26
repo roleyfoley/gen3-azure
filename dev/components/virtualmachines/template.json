@@ -40,20 +40,16 @@
                 "description": "The command you wish to use to execute your CustomScripts."
             }
         },
-        "rbacRoleName": {
-            "type": "string",
-            "metadata": {
-              "description": "The name of the RBAC role to assign to the virtual machine(s)."
-            }
-        },
         "subnetId": {
             "type": "string"
         },
-        "rbac_guid": {
-            "defaultValue": "[newGuid()]",
+        "storageAccountName": {
             "type": "string"
         },
-        "storageAccountName": {
+        "vmIdentityName": {
+            "type": "string"
+        },
+        "vmIdentityResourceGroup": {
             "type": "string"
         }
     },
@@ -101,13 +97,6 @@
                 "cmd": "[concat(parameters('scriptsCommand'), ' ', variables('storage').name)]"
             }
         },
-        "rbac": {
-            "name": "[parameters('rbac_guid')]",
-            "id": "[resourceId('Microsoft.Authorization/roleAssignments', parameters('rbac_guid'))]",
-            "role": {
-                "Storage Account Contributor": "[resourceId('Microsoft.Authorization/roleDefinitions/', '17d1049b-9a84-46fb-8f53-869881c3d3ab')]"
-            }
-        },
         "storage": {
             "name": "[parameters('storageAccountName')]"
         }
@@ -144,7 +133,10 @@
                 "[variables('nic').id]"
             ],
             "identity": {
-                "type": "SystemAssigned"
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                    "[resourceID(parameters('vmIdentityResourceGroup'),'Microsoft.ManagedIdentity/userAssignedIdentities/', parameters('vmIdentityName'))]": {}
+                }
             },
             "properties": {
                 "hardwareProfile": {
@@ -198,8 +190,7 @@
             "apiVersion": "2019-03-01",
             "location": "[resourceGroup().location]",
             "dependsOn": [
-                "[variables('vm').id]",
-                "[variables('rbac').id]"
+                "[variables('vm').id]"
             ],
             "properties": {
               "publisher": "Microsoft.Azure.Extensions",
@@ -212,19 +203,6 @@
                 ],
                 "commandToExecute": "[variables('extension').scripts.cmd]"
               }
-            }
-        },
-        {
-            "type": "Microsoft.Authorization/roleAssignments",
-            "apiVersion": "2018-01-01-preview",
-            "name": "[variables('rbac').name]",
-            "dependsOn": [
-                "[variables('vm').id]"
-            ],
-            "properties": {
-              "roleDefinitionId": "[variables('rbac').role[parameters('rbacRoleName')]]",
-              "principalId": "[reference(concat('Microsoft.Compute/virtualMachines/', variables('vm').name), '2019-03-01', 'Full').identity.principalId]",
-              "scope": "[subscription().id]"
             }
         },
         {
@@ -280,26 +258,5 @@
             }
         }
     ],
-    "outputs": {
-        "pip": {
-            "type": "object",
-            "value": "[reference(variables('pip').name)]"
-        },
-        "nsg": {
-            "type": "object",
-            "value": "[reference(variables('nsg').name)]"
-        },
-        "vm": {
-            "type": "object",
-            "value": "[reference(variables('vm').name)]"
-        },
-        "rbac": {
-            "type": "object",
-            "value": "[reference(variables('rbac').name)]"
-        },
-        "nic": {
-            "type": "object",
-            "value": "[reference(variables('nic').name)]"
-        }
-    }
+    "outputs": {}
 }
