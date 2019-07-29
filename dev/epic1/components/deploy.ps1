@@ -134,9 +134,8 @@ $outputsIAM = (
         -TemplateFile "$($components.iam)\template.json" `
         -TemplateParameterFile "$($components.iam)\testparameters.json").Outputs
 
-do {
-    Start-Sleep -Seconds 5
-} while (!$(Get-AzResource -ResourceGroupName "$resourceGroupName-iam" -Name "identity-*"))
+
+Start-Sleep -Seconds 30
 
 Write-Output "Starting deployment of RBAC component..."  
 New-AzDeployment `
