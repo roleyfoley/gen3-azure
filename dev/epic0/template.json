@@ -24,7 +24,7 @@
             "minLength": 3
         },
         "storageAccounts_blobContainerName": {
-            "defaultValue": "blobcontainer",
+            "defaultValue": "container",
             "type": "string"
         },
         "networkInterfaces_name": {
@@ -325,7 +325,7 @@
             "apiVersion": "2019-03-01",
             "location": "[resourceGroup().location]",
             "dependsOn": [
-                "[concat('Microsoft.Compute/virtualMachines/', parameters('virtualMachines_name'))]"
+                "[resourceId('Microsoft.Compute/virtualMachines', parameters('virtualMachines_name'))]"
             ],
             "properties": {
               "publisher": "Microsoft.Azure.Extensions",
@@ -336,7 +336,7 @@
                 "fileUris": [
                   "[concat(parameters('virtualMachinesExtensions_scriptsPath'), '/', variables('virtualMachinesExtensions_script'))]"
                 ],
-                "commandToExecute": "[concat(parameters('virtualMachinesExtensions_commandToExecute'), ' ', uniqueString(resourceGroup().id))]"
+                "commandToExecute": "[concat(parameters('virtualMachinesExtensions_commandToExecute'), ' storage', uniqueString(resourceGroup().id))]"
               }
             }
         },
