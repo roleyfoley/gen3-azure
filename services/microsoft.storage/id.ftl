@@ -1,0 +1,5 @@
+[#ftl]
+
+[#assign AZURE_STORAGEACCOUNT_RESOURCE_TYPE = "account"]
+[#assign AZURE_BLOBSERVICE_RESOURCE_TYPE = "blob"]
+[#assign AZURE_BLOBSERVICE_CONTAINER_RESOURCE_TYPE = "container"]
