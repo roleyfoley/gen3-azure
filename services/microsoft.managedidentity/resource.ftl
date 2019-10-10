@@ -1,5 +1,16 @@
 [#ftl]
 
+[#assign azureResourceProfiles +=
+    {
+        AZURE_IAM_SERVICE : {
+            AZURE_USER_ASSIGNED_IDENTITY_RESOURCE_TYPE : {
+                "apiVersion" : "2018-11-30",
+                "type" : "Microsoft.ManagedIdentity/userAssignedIdentities"
+            }
+        }
+    }
+]
+
 [#assign IDENTITY_OUTPUT_MAPPINGS =
     {
         REFERENCE_ATTRIBUTE_TYPE : {
@@ -22,8 +33,7 @@
 
     [@armResource
         name=name
-        type="Microsoft.ManagedIdentity/userAssignedIdentities"
-        apiVersion="2018-11-30"
+        profile=AZURE_USER_ASSIGNED_IDENTITY_RESOURCE_TYPE
         location=location
         dependsOn=dependsOn
         properties={}

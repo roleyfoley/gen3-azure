@@ -44,8 +44,7 @@
 
 [#macro armResource
     name
-    type
-    apiVersion
+    profile
     location=""
     dependsOn=[]
     properties={}
@@ -74,13 +73,21 @@
         [/#list]
     --]
 
+    [#local resourceProfile = getAzureResourceProfile(profile)]
+    [#if ! (resourceProfile?contains("type") || resourceProfile?contains("apiVersion"))]
+        [@fatal
+            message="Azure Resource Profile is incomplete. Requires 'type' and 'apiVersion' attributes for all resources."
+            context=core
+        /]
+    [/#if]
+
     [@addToJsonOutput 
         name="resources"
         content=
             {
                 "name": name,
-                "type": type,
-                "apiVersion": apiVersion
+                "type": resourceProfile.Type,
+                "apiVersion": resourceProfile.apiVersion
                 "properties": properties
             } +
             attributeIfContent("location", location) +
@@ -96,25 +103,35 @@
 
     [#list outputs as outputType,outputValue]
         [#if outputValue.UseRef!false]
-        [#-- the resourceId Azure template function requires a varying number of arguments 
-        based on how many "segments" there are in the resource type namespace. --]
-            [#local resourceIdParameters=[]]
-            [#list ([type] + parentNames + [name]) as resourceIdParameter]
-                [#local resourceIdParameters+=["'" + resourceIdParameter + "'"]]
-            [/#list]
+
+            [#-- format the ARM function: resourceId() --]
+            [#local reference= 
+                formatAzureResourceIdReference(
+                    resourceId=name
+                    resourceType=type
+                )
+            ]
 
             [@armOutput
                 name=name
                 type="string"
-                value="[resourceId(" + resourceIdParameters?join(", ") + ")]"
+                value=reference
             /]
         [#else]
+
+            [#-- format the ARM function: reference() --] 
+            [#local reference= 
+                formatAzureResourceReference(
+                    resourceId=name
+                    resourceType=type
+                    attributes=outputValue.Property
+                )
+            ]
        
             [@armOutput
                 name=name,
                 type="string",
-                value="[reference(name, apiVersion, 'Full')" + outputValue.Property?ensure_starts_with(".") + "]",
-                (outputValue.condition)?has_content?then(condition=outputValue.condition,condition="")          
+                value=reference   
             /]
 
         [/#if]

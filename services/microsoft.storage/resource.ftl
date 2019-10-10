@@ -1,5 +1,24 @@
 [#ftl]
 
+[#assign azureResourceProfiles +=
+    {
+        AZURE_STORAGE_SERVICE : {
+            AZURE_STORAGEACCOUNT_RESOURCE_TYPE : {
+                "apiVersion" : "2019-04-01",
+                "type" : "Microsoft.Storage/storageAccounts"
+            },
+            AZURE_BLOBSERVICE_RESOURCE_TYPE : {
+                "apiVersion" : "2019-04-01",
+                "type" : "Microsoft.Storage/storageAccounts/blobServices"
+            },
+            AZURE_BLOBSERVICE_CONTAINER_RESOURCE_TYPE : {
+                "apiVersion" : "2019-04-01",
+                "type" : "Microsoft.Storage/storageAccounts/blobServices/containers"
+            }
+        }
+    }
+]
+
 [#assign STORAGE_ACCOUNT_OUTPUT_MAPPINGS =
     {
         REFERENCE_ATTRIBUTE_TYPE : {
@@ -143,8 +162,7 @@
 
     [@armResource
         name=name
-        type="Microsoft.Storage/storageAccounts"
-        apiVersion="2019-04-01"
+        profile=AZURE_STORAGEACCOUNT_RESOURCE_TYPE
         kind=kind
         location=location
         tags=tags
@@ -192,8 +210,7 @@
 
     [@armResource
         name=name
-        type="Microsoft.Storage/storageAccounts/blobServices"
-        apiVersion="2019-04-01"
+        profile=AZURE_BLOBSERVICE_RESOURCE_TYPE
         dependsOn=dependsOn
         resources=resources
         outputs=STORAGE_BLOB_OUTPUT_MAPPINGS
@@ -209,8 +226,6 @@
 
 [#macro createBlobServiceContainer
     name
-    type="Microsoft.Storage/storageAccounts/blobServices/containers"
-    apiVersion="2019-04-01"
     publicAccess=false
     metadata={}
     resources=[]
@@ -218,6 +233,7 @@
 
     [@armResource
         name=name
+        profile=AZURE_BLOBSERVICE_CONTAINER_RESOURCE_TYPE
         resources=resources
         dependsOn=dependsOn
         outputs=STORAGE_BLOB_CONTAINER_OUTPUT_MAPPINGS

@@ -1,7 +1,6 @@
 
 [#ftl]
 [@addMasterData
-  [#-- TODO(rossmurr4y): make this variable name provider independent --]
   provider=AZURE_PROVIDER
   data=
   {
