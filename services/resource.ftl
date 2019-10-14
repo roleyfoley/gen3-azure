@@ -105,54 +105,8 @@ can be referenced via dot notation. --]
 [/#function]
 
 [#-- Get stack output --]
-[#function getStackOutputObject id deploymentUnit="" region="" account=(accountObject.AZUREId)!""]
-    [#list stackOutputsList as stackOutputs]
-        [#local outputId = stackOutputs[id]?has_content?then(
-                id,
-                formatId(id, stackOutputs.Region?replace("-", "X"))
-            )
-        ]
-
-        [#if
-            ((!account?has_content)||(account == stackOutputs.Account)) &&
-            ((!region?has_content)||(region == stackOutputs.Region)) &&
-            ((!deploymentUnit?has_content)||(deploymentUnit == stackOutputs.DeploymentUnit)) &&
-            (stackOutputs[outputId]?has_content)
-        ]
-            [#return
-                {
-                    "Account" : stackOutputs.Account,
-                    "Region" : stackOutputs.Region,
-                    "Level" : stackOutputs.Level,
-                    "DeploymentUnit" : stackOutputs.DeploymentUnit,
-                    "Id" : id,
-                    "Value" : stackOutputs[outputId]
-                }
-            ]
-        [/#if]
-    [/#list]
-    [#return {}]
-[/#function]
-
-[#function getStackOutput id deploymentUnit="" region="" account=(accountObject.AZUREId)!""]
-    [#local result =
-        getStackOutputObject(
-            id,
-            deploymentUnit,
-            region,
-            account
-        )
-    ]
-    [#return
-        result?has_content?then(
-            result.Value,
-            ""
-        )
-    ]
-[/#function]
-
 [#function getExistingReference resourceId attributeType="" inRegion="" inDeploymentUnit="" inAccount=(accountObject.AZUREId)!""]
-    [#return getStackOutput(formatAttributeId(resourceId, attributeType), inDeploymentUnit, inRegion, inAccount) ]
+    [#return getStackOutput(AZURE_PROVIDER, formatAttributeId(resourceId, attributeType), inDeploymentUnit, inRegion, inAccount) ]
 [/#function]
 
 [#function getReference resourceId attributeType="" inRegion=""]

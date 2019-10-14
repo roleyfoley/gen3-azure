@@ -1,3 +1,5 @@
+[#assign AZURE_OUTPUT_RESOURCE_TYPE = "resource" ]
+
 [#function getArmTemplateDefaultOutputs]
     [#return
         {
@@ -143,6 +145,15 @@
     [#-- Initialise outputs --]
     [@initialiseJsonOutput "resources" /]
     [@initialiseJsonOutput "outputs" /]
+
+    [@addGenPlanStepOutputMapping 
+        provider=AZURE_PROVIDER
+        subsets=[
+            "template"
+        ]
+        outputType=AZURE_OUTPUT_RESOURCE_TYPE
+        outputFormat=""
+    /]
 
     [#-- Resources --]
     [#if include?has_content]
