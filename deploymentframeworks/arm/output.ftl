@@ -1,5 +1,3 @@
-[#assign AZURE_OUTPUT_RESOURCE_TYPE = "resource" ]
-
 [#function getArmTemplateDefaultOutputs]
     [#return
         {
@@ -142,19 +140,6 @@
 
 [#macro arm_output_resource level="" include=""]
 
-    [#-- Initialise outputs --]
-    [@initialiseJsonOutput "resources" /]
-    [@initialiseJsonOutput "outputs" /]
-
-    [@addGenPlanStepOutputMapping 
-        provider=AZURE_PROVIDER
-        subsets=[
-            "template"
-        ]
-        outputType=AZURE_OUTPUT_RESOURCE_TYPE
-        outputFormat=""
-    /]
-
     [#-- Resources --]
     [#if include?has_content]
         [#include include?ensure_starts_with("/")]
@@ -178,3 +163,19 @@
         /]
     [#if]
 [/#macro]
+
+
+[#-- Initialise the possible outputs to make sure they are available to all steps --]
+[@initialiseJsonOutput name="resources" /]
+[@initialiseJsonOutput name="outputs" /]
+
+[#assign AZURE_OUTPUT_RESOURCE_TYPE = "resource" ]
+
+[@addGenPlanStepOutputMapping 
+    provider=AZURE_PROVIDER
+    subsets=[
+        "template"
+    ]
+    outputType=AZURE_OUTPUT_RESOURCE_TYPE
+    outputFormat=""
+/]
