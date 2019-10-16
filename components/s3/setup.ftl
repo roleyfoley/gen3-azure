@@ -36,7 +36,6 @@
         )]
     [/#list]
 
-    [/#list]
     [#local ipRulesConfiguration = []]
     [#list storageCIDRs as cidr]
         [#local ipRulesConfiguration += getStorageNetworkAclsIpRules(
