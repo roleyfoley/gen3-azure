@@ -19,11 +19,11 @@
     }
 ]
 
-[#assign outputMappings +=
-    {
-        AZURE_IAM_IDENTITY_RESOURCE_TYPE : IDENTITY_OUTPUT_MAPPINGS
-    }
-]
+[@addOutputMapping 
+    provider=AZURE_PROVIDER
+    resourceType=AZURE_IAM_IDENTITY_RESOURCE_TYPE
+    mappings=IDENTITY_OUTPUT_MAPPINGS
+/]
 
 [#macro createUserAssignedIdentity
     name

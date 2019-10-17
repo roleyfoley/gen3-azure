@@ -124,16 +124,15 @@ can be referenced via dot notation. --]
         isPartOfCurrentDeploymentUnit(resourceId)]
         [#if attributeType?has_content]
             [#local resourceType = getResourceType(resourceId)]
-            [#if outputMappings[resourceType]?? ]
-                [#local mapping = outputMappings[resourceType][attributeType] ]
-                [#if (mapping.Attribute)?has_content]
-                    [#return
-                        formatAzureResourceReference(
-                            resourceId,
-                            resourceType         
-                        )
-                    ]
-                [/#if]
+            [#local mapping = getOutputMappings(AZURE_PROVIDER, resourceType, attributeType)]
+            [#if (mapping.Attribute)?has_content]
+                [#return
+                    formatAzureResourceReference(
+                        resourceId,
+                        resourceType         
+                    )
+                ]
+            [/#if]
             [#else]
                 [#return
                     {
