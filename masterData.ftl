@@ -12,6 +12,7 @@
           "a": {
             "Title": "Zone A",
             "Description": "Zone A"
+            "AzureId" : "eastus"
           }
         },
         "Accounts": {}

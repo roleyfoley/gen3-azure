@@ -1,0 +1,33 @@
+[#ftl]
+[@addResourceGroupInformation
+  type=NETWORK_COMPONENT_TYPE
+  attributes=[]
+  provider=AZURE_PROVIDER
+  resourceGroup=DEFAULT_RESOURCE_GROUP
+  services=
+    [
+      AZURE_NETWORK_SERVICE
+    ]
+/]
+
+[@addResourceGroupInformation
+  type=NETWORK_ACL_COMPONENT_TYPE
+  attributes=[]
+  provider=AZURE_PROVIDER
+  resourceGroup=DEFAULT_RESOURCE_GROUP
+  services=
+    [
+      AZURE_NETWORK_SERVICE
+    ]
+/]
+
+[@addResourceGroupInformation
+  type=NETWORK_ROUTE_TABLE_COMPONENT_TYPE
+  attributes=[]
+  provider=AZURE_PROVIDER
+  resourceGroup=DEFAULT_RESOURCE_GROUP
+  services=
+    [
+      AZURE_NETWORK_SERVICE
+    ]
+/]
