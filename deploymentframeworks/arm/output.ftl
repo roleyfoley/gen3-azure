@@ -1,3 +1,5 @@
+[#ftl]
+
 [#function getArmTemplateDefaultOutputs]
     [#return
         {
@@ -11,7 +13,7 @@
 [#function getArmTemplateCoreOutputs deploymentUnit=deploymentUnit]
     [#return {
         "Subscription": { "type": "string", "value": "[subscription().id]"},
-        "ResourceGroup: { "type": "string", "value": "[resourceGroup().id]"},
+        "ResourceGroup": { "type": "string", "value": "[resourceGroup().id]"},
         "Region": { "type": "string", "value": "[resourceGroup().location]"},
         "DeploymentUnit": {
             "type": "string",
@@ -39,7 +41,7 @@
                 } + 
                 attributeIfContent("condition", condition)
             }
-    ]
+    /]
 [/#macro]
 
 [#macro armResource
@@ -87,7 +89,7 @@
             {
                 "name": name,
                 "type": resourceProfile.Type,
-                "apiVersion": resourceProfile.apiVersion
+                "apiVersion": resourceProfile.apiVersion,
                 "properties": properties
             } +
             attributeIfContent("location", location) +
@@ -129,8 +131,8 @@
             ]
        
             [@armOutput
-                name=name,
-                type="string",
+                name=name
+                type="string"
                 value=reference   
             /]
 
@@ -161,7 +163,7 @@
             } +
             attributeIfContent("COTMessages", logMessages)
         /]
-    [#if]
+    [/#if]
 [/#macro]
 
 

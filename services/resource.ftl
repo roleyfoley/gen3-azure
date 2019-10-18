@@ -132,7 +132,6 @@ can be referenced via dot notation. --]
                         resourceType         
                     )
                 ]
-            [/#if]
             [#else]
                 [#return
                     {

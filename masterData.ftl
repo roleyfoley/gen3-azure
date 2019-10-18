@@ -11,7 +11,7 @@
         "Zones": {
           "a": {
             "Title": "Zone A",
-            "Description": "Zone A"
+            "Description": "Zone A",
             "AzureId" : "eastus"
           }
         },
@@ -95,7 +95,13 @@
       "default": {}
     },
     "BaselineProfiles": {
-      "default": {}
+      "default": {
+        "OpsData": "opsdata",
+        "AppData": "appdata",
+        "Encryption": "cmk",
+        "SSHKey": "ssh",
+        "CDNOriginKey": "oai"
+      }
     },
     "LogFilters": {},
     "NetworkEndpointGroups": {},
