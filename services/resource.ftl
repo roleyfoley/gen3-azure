@@ -35,11 +35,11 @@ Id of a resource within the same template, only the resourceId is necessary.
 a resource, be it previously deployed or within current template. This differs from
 the previous function as the ARM function will return a full object, from which attributes
 can be referenced via dot notation. --]
-[#function formatAzureResourceReference(
+[#function formatAzureResourceReference
     resourceId
     resourceType=""
     serviceType=""
-    attributes...)]
+    attributes...]
 
     [#if ! resourceType?has_content]
         [#local resourceType = getResourceType(resourceId)]
@@ -51,6 +51,14 @@ can be referenced via dot notation. --]
         [#local resourceProfile = getAzureResourceProfile(resourceType)]
     [/#if]
 
+    [#-- Type/ApiVersion are Mandatory for all Azure Resources, so validate they exist. --]
+    [#if ! (resourceProfile["type"]?has_content || resourceProfile["apiVersion"]?has_content)]
+        [@fatal
+            message="Azure Resource Profile is incomplete. Requires 'type' and 'apiVersion' attributes for all resources."
+            context=resourceProfile
+        /]
+    [/#if]
+
     [#local apiVersion = resourceProfile.apiVersion]
     [#local typeFull = resourceProfile.type]
 
@@ -59,18 +67,14 @@ can be referenced via dot notation. --]
         [#return
             "[reference(" + typeFull + "/" + resourceId + ", " + apiVersion + ", 'Full')." + attributes?join(".") + "]"
         ]
-    [#/else]
+    [#else]
         [#-- Example: "[reference(typeFull/resourceId, "2019-09-09", 'Full')]"  --]
-        [#return
-             "[reference(" + typeFull + "/" + resourceId + ", " + apiVersion + ", 'Full')]"
-        ]
+        [#return "[reference(" + typeFull + "/" + resourceId + ", " + apiVersion + ", 'Full')]" ]
     [/#if]
 [/#function]
 
-[#function getAzureResourceProfile(resourceType, serviceType="")]
+[#function getAzureResourceProfile resourceType serviceType=""]
 
-    [@debug message="azureResourceProfiles" context=azureResourceProfiles enabled=false /]
-    
     [#local profileObj = {}]
 
     [#-- Service has been provided, so lookup can be specific --]
@@ -83,21 +87,21 @@ can be referenced via dot notation. --]
     [#else]
         [#-- Service has not been specific, check all Services for the resourceType --]
         [#list azureResourceProfiles as service, resources]
-            [#list resources as resource]
-                [#if resource == resourceType]
-                    [#local profileObj = azureResourceProfiles[service][resource]]
+            [#list resources as resource, attr]
+                [#if resource = resourceType]
+                    [#local profileObj = attr]
                 [/#if]
             [/#list]
         [/#list]
     [/#if]
 
-    [#if profile?has_content]
+    [#if profileObj?has_content]
         [#return profileObj]
     [#else]
         [#return
             {
                 "Mapping" : "COTFatal: ResourceProfile not found.",
-                "ResourceId" : resourceId,
+                "ServiceType" : serviceType,
                 "ResourceType" : resourceType
             }
         ]

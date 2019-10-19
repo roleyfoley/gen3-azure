@@ -47,6 +47,7 @@
 [#macro armResource
     name
     profile
+    identity={}
     location=""
     dependsOn=[]
     properties={}
@@ -59,6 +60,11 @@
     resources=[]
     parentNames=[]
     outputs={}]
+    
+    [#--
+        Note - "Identity" is a unique attribute and is not available to resources
+        that can be assigned a Managed Identity
+    --]
 
     [#-- TODO(rossmurr4y): impliment localDependencies as the AWS provider does. --]
     [#-- The AWS Provider checks that the dependencies exist with the getReference
@@ -76,43 +82,41 @@
     --]
 
     [#local resourceProfile = getAzureResourceProfile(profile)]
-    [#if ! (resourceProfile?contains("type") || resourceProfile?contains("apiVersion"))]
+    [#if ! (resourceProfile["type"]?has_content || resourceProfile["apiVersion"]?has_content)]
         [@fatal
             message="Azure Resource Profile is incomplete. Requires 'type' and 'apiVersion' attributes for all resources."
-            context=core
+            context=resourceProfile
         /]
     [/#if]
 
     [@addToJsonOutput 
         name="resources"
         content=
-            {
-                "name": name,
-                "type": resourceProfile.Type,
-                "apiVersion": resourceProfile.apiVersion,
-                "properties": properties
-            } +
-            attributeIfContent("location", location) +
-            attributeIfContent("dependsOn", dependsOn) +
-            attributeIfContent("tags", tags) +
-            attributeIfContent("comments", comments) +
-            attributeIfContent("copy", copy) +
-            attributeIfContent("sku", sku) +
-            attributeIfContent("kind", kind) +
-            attributeIfContent("plan", plan) +
-            attributeIfContent("resources", resources)
+            [
+                {
+                    "name": name,
+                    "type": resourceProfile.type,
+                    "apiVersion": resourceProfile.apiVersion,
+                    "properties": properties
+                } +
+                attributeIfContent("identity", identity) +
+                attributeIfContent("location", location) +
+                attributeIfContent("dependsOn", dependsOn) +
+                attributeIfContent("tags", tags) +
+                attributeIfContent("comments", comments) +
+                attributeIfContent("copy", copy) +
+                attributeIfContent("sku", sku) +
+                attributeIfContent("kind", kind) +
+                attributeIfContent("plan", plan) +
+                attributeIfContent("resources", resources)
+            ]
     /]
 
     [#list outputs as outputType,outputValue]
         [#if outputValue.UseRef!false]
 
             [#-- format the ARM function: resourceId() --]
-            [#local reference= 
-                formatAzureResourceIdReference(
-                    resourceId=name
-                    resourceType=type
-                )
-            ]
+            [#local reference=formatAzureResourceIdReference(name,type)]
 
             [@armOutput
                 name=name
@@ -122,13 +126,7 @@
         [#else]
 
             [#-- format the ARM function: reference() --] 
-            [#local reference= 
-                formatAzureResourceReference(
-                    resourceId=name
-                    resourceType=type
-                    attributes=outputValue.Property
-                )
-            ]
+            [#local reference=formatAzureResourceReference(name,type)]
        
             [@armOutput
                 name=name
@@ -149,16 +147,16 @@
         [@processComponents level /]
     [/#if]
 
-    [#if getOutput("resources")?has_content || logMessages?has_content]
+    [#if getOutputContent("resources")?has_content || logMessages?has_content]
         [@toJSON
             {
-                "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                '$schema': "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
                 "contentVersion": "1.0.0.0",
                 "parameters": {},
                 "variables": {},
-                "resources": getOutput("resources"),
+                "resources": getOutputContent("resources"),
                 "outputs":
-                    getOutput("outputs") +
+                    getOutputContent("outputs") +
                     getArmTemplateCoreOutputs()
             } +
             attributeIfContent("COTMessages", logMessages)

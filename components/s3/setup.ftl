@@ -1,13 +1,11 @@
 [#ftl]
 
 [#macro azure_s3_arm_solution occurrence]
-    [@debug message="Entering" context=occurrence enabled=false /]
 
     [#if deploymentSubsetRequired("genplan", false)]
         [@addDefaultGenerationPlan subsets="template" /]
         [#return]
     [/#if]
-
     [#local core = occurrence.Core ]
     [#local solution = occurrence.Configuration.Solution ]
     [#local resources = occurrence.State.Resources ]
@@ -19,42 +17,58 @@
 
     [#local storageProfile = getStorage(occurrence, "storageAccount")]
 
-    [#-- Baseline component lookup --]
+    [#-- Baseline component lookup 
     [#local baselineLinks = getBaselineLinks(occurrence, [ "CDNOriginKey" ])]
     [#local baselineComponentIds = getBaselineComponentIds(baselineLinks)]
+    --]
 
-   [#local dependencies = [] ]
+    [#local dependencies = [] ]
 
     [#-- Add NetworkACL Configuration --]
     [#local virtualNetworkRulesConfiguration = []]
-    [#local storageCIDRs = getGroupCIDRs(solution.IPAddressGroups)]
+    [#list solution.PublicAccess?values as publicAccessConfiguration]
 
-    [#list solution.IPAddressGroups as subnet]
-      [#local virtualNetworkRulesConfiguration += getStorageNetworkAclsVirtualNetworkRules(
-            id=(getExistingReference(formatResourceId(AZURE_NETWORK_RESOURCE_TYPE, subnet)).id)
-            action="Allow"
-        )]
+        [#local storageCIDRs = getGroupCIDRs(publicAccessConfiguration.IPAddressGroups)]
+
+        [#list publicAccessConfiguration.Paths as publicPrefix]
+            [#if publicAccessConfiguration.Enabled ]
+
+                [#switch publicAccessConfiguration.Permissions ]
+                    [#case "ro" ]
+                        [#-- TODO - add RO config --]
+                        [#break]
+                    [#case "wo" ]
+                        [#-- TODO - add WO config --]
+                        [#break]
+                    [#case "rw" ]
+                        [#-- TODO - add RW config --]
+                        [#break]
+                [/#switch]
+            [/#if]
+        [/#list]
     [/#list]
+
 
     [#local ipRulesConfiguration = []]
     [#list storageCIDRs as cidr]
-        [#local ipRulesConfiguration += getStorageNetworkAclsIpRules(
-            value=cidr
-            action="Allow"
-        )]
+        [#local ipRulesConfiguration += asArray(getStorageNetworkAclsIpRules(cidr, "Allow"))]
     [/#list]
     [#local networkAclsConfiguration = getStorageNetworkAcls(
-        defaultAction="Deny"
-        ipRules=ipRulesConfiguration
-        virtualNetworkRules=virtualNetworkRulesConfiguration
-        bypass="None"
-    )]
+                                        "Deny",
+                                        ipRulesConfiguration,
+                                        virtualNetworkRulesConfiguration,
+                                        "None")
+    ]
 
     [#-- Retrieve Certificate Information --]
-    [#local certificateObject = getCertificateObject(solution.Certificate, segmentQualifiers, sourcePortId, sourcePortName) ]
-    [#local primaryDomainObject = getCertificatePrimaryDomain(certificateObject) ]
-    [#local fqdn = formatDomainName(hostName, primaryDomainObject)]
-
+    [#if solution.Certificate?has_content]
+        [#local certificateObject = getCertificateObject(solution.Certificate, segmentQualifiers, sourcePortId, sourcePortName) ]
+        [#local primaryDomainObject = getCertificatePrimaryDomain(certificateObject) ]
+        [#local fqdn = formatDomainName(hostName, primaryDomainObject)]
+    [#else]
+        [#local fqdn = ""]
+    [/#if]
+    
     [#if deploymentSubsetRequired("s3", true)]
 
         [#-- TODO(rossmurr4y): Impliment tags. Currently the shared function getOccurrenceCoreTags
@@ -65,7 +79,9 @@
             kind=storageProfile.Type
             sku=getStorageSku(storageProfile.Tier, storageProfile.Replication)
             location=regionId
-            customDomain=getStorageCustomDomain(fqdn)
+            customDomain=fqdn?has_content?then(
+                getStorageCustomDomain(fqdn),
+                {})
             networkAcls=networkAclsConfiguration
             accessTier=(storageProfile.AccessTier!{})
             azureFilesIdentityBasedAuthentication=
@@ -92,7 +108,7 @@
 
         [@createBlobServiceContainer 
             name=containerId
-            publicAccess=solution.Access.PublicAccess
+            publicAccess=solution.PublicAccess.Enabled
             dependsOn=dependencies        
         /]
 
