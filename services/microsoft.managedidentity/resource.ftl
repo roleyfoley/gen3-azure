@@ -1,15 +1,14 @@
 [#ftl]
 
-[#assign azureResourceProfiles +=
-    {
-        AZURE_IAM_SERVICE : {
-            AZURE_USER_ASSIGNED_IDENTITY_RESOURCE_TYPE : {
-                "apiVersion" : "2018-11-30",
-                "type" : "Microsoft.ManagedIdentity/userAssignedIdentities"
-            }
+[@addResourceProfile
+    service=AZURE_IAM_SERVICE
+    resource=AZURE_USER_ASSIGNED_IDENTITY_RESOURCE_TYPE
+    profile=
+        {
+            "apiVersion" : "2018-11-30",
+            "type" : "Microsoft.ManagedIdentity/userAssignedIdentities"
         }
-    }
-]
+/]
 
 [#assign IDENTITY_OUTPUT_MAPPINGS =
     {
