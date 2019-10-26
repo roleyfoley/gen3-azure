@@ -3,9 +3,11 @@
 [#macro azure_s3_arm_state occurrence parent={} baseState={}]
     [#local core = occurrence.Core]
     [#local solution = occurrence.Configuration.Solution]
+
     [#local storageAccountId = formatResourceId(AZURE_STORAGEACCOUNT_RESOURCE_TYPE, core.Id)]
     [#local containerId = formatResourceId( AZURE_BLOBSERVICE_CONTAINER_RESOURCE_TYPE, core.Id )]
     [#local blobId = formatResourceId( AZURE_BLOBSERVICE_RESOURCE_TYPE, core.Id )]
+
     [#local publicAccessEnabled = false]
     [#list solution.PublicAccess?values as publicPrefixConfiguration]
         [#if publicPrefixConfiguration.Enabled]
@@ -14,19 +16,26 @@
         [/#if]
     [/#list]
 
+    [#--
+        Note: it is a requirement that the blobService name is "default" in all cases.
+        https://tinyurl.com/yxozph9o
+    --]
     [#assign componentState=
         {
             "Resources" : {
                 "storageAccount" : {
                     "Id" : storageAccountId,
+                    "Name" : formatName(AZURE_STORAGEACCOUNT_RESOURCE_TYPE, core.ShortName),
                     "Type" : AZURE_STORAGEACCOUNT_RESOURCE_TYPE
                 },
                 "blobService" : {
                     "Id" : blobId,
+                    "Name" : "default",
                     "Type" : AZURE_BLOBSERVICE_RESOURCE_TYPE
                 },
                 "container" : {
                     "Id" : containerId,
+                    "Name" : formatName(AZURE_BLOBSERVICE_CONTAINER_RESOURCE_TYPE, core.ShortName),
                     "Type" : AZURE_BLOBSERVICE_CONTAINER_RESOURCE_TYPE
                 }
             },

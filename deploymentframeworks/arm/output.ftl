@@ -45,6 +45,7 @@
 [/#macro]
 
 [#macro armResource
+    id
     name
     profile
     identity={}
@@ -75,100 +76,73 @@
     [#-- 
         [#local localDependencies = [] ]
         [#list asArray(dependencies) as resourceId]
-            [#if getReference(resourceId)?is_hash]
+            [#if getReference(id, name)?is_hash]
                 [#local localDependencies += [resourceId] ]
             [/#if]
         [/#list]
     --]
 
     [#local resourceProfile = getAzureResourceProfile(profile)]
-    [#if ! (resourceProfile["type"]?has_content || resourceProfile["apiVersion"]?has_content || resourceProfile["conditions"]?has_content)]
-        [@fatal
-            message="Azure Resource Profile is incomplete. Requires 'type' and 'apiVersion' attributes for all resources."
-            context=resourceProfile
-        /]
-    [/#if]
-    
-    [#local segmentedName = formatAzureResourceName(name, parentNames)]
-
-    [#-- Resource Profile Conditions Processing --]
-    [#local resourceContent = 
-        {
-            "name": segmentedName,
-            "type": resourceProfile.type,
-            "apiVersion": resourceProfile.apiVersion,
-            "properties": properties
-        } +
-        attributeIfContent("identity", identity) +
-        attributeIfContent("location", location) +
-        attributeIfContent("dependsOn", dependsOn) +
-        attributeIfContent("tags", tags) +
-        attributeIfContent("comments", comments) +
-        attributeIfContent("copy", copy) +
-        attributeIfContent("sku", sku) +
-        attributeIfContent("kind", kind) +
-        attributeIfContent("plan", plan) +
-        attributeIfContent("resources", resources)
-    ]
-
-    [#list resourceProfile.conditions as condition]
-        [#switch condition]
-            [#case "name_to_lower"]
-                [#local resourceContent = mergeObjects(
-                    resourceContent,
-                    { "name" : segmentedName?lower_case }
-                )]
-                [#break]
-            [#case "parent_to_lower"]
-                [#break]
-            [#default]
-                [@fatal
-                    message="Azure Resource Profile Condition does not exist."
-                    context=condition
-                /]
-                [#break]
-        [/#switch]
-    [/#list]
 
     [@addToJsonOutput 
         name="resources"
-        content=[resourceContent]
+        content=[
+            {
+                "name": name,
+                "type": resourceProfile.type,
+                "apiVersion": resourceProfile.apiVersion,
+                "properties": properties
+            } +
+            attributeIfContent("identity", identity) +
+            attributeIfContent("location", location) +
+            attributeIfContent("dependsOn", dependsOn) +
+            attributeIfContent("tags", tags) +
+            attributeIfContent("comments", comments) +
+            attributeIfContent("copy", copy) +
+            attributeIfContent("sku", sku) +
+            attributeIfContent("kind", kind) +
+            attributeIfContent("plan", plan) +
+            attributeIfContent("resources", resources)
+        ]
     /]
 
     [#list outputs as outputType,outputValue]
         [#if outputType == REFERENCE_ATTRIBUTE_TYPE]
 
             [#-- format the ARM function: resourceId() --]
-            [#local reference=formatAzureResourceIdReference(segmentedName, type)]
+            [#local reference=formatAzureResourceIdReference(
+                id,
+                name,
+                "",
+                "",
+                parentNames
+            )]
 
             [@armOutput
-                name=name
+                name=id
                 type="string"
                 value=reference
             /]
             
         [#else]
-            [#if outputValue.Property?has_content!false]
 
-                [#-- format the ARM function: reference() --] 
-                [#local reference=formatAzureResourceReference(
-                    segmentedName,
-                    type,
-                    "",
-                    parentNames,
-                    outputValue.Property!""
-                )]
-        
-                [@armOutput
-                    name=formatAttributeId(name, outputType)
-                    type="string"
-                    type=((value.Property)!false)?then(
-                        "string",
-                        "object"
-                    )
-                    value=reference
-                /] 
-            [/#if]
+            [#-- format the ARM function: reference() --] 
+            [#local reference=formatAzureResourceReference(
+                id,
+                name,
+                "",
+                parentNames,
+                outputValue.Property!""
+            )]
+    
+            [@armOutput
+                name=formatAttributeId(id, outputType)
+                type=((outputValue.Property?has_content)!false)?then(
+                    "string",
+                    "object"
+                )
+                value=reference
+            /] 
         [/#if]
     [/#list]
 [/#macro]
@@ -193,7 +167,8 @@
                 "outputs":
                     getOutputContent("outputs") +
                     getArmTemplateCoreOutputs()
-            }
+            } [#-- +
+            attributeIfContent("COTMessages", logMessages) --]
         /]
     [/#if]
 [/#macro]

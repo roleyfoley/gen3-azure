@@ -25,12 +25,14 @@
 /]
 
 [#macro createUserAssignedIdentity
+    id
     name
     location=""
     dependsOn=[]
     tags={}]
 
     [@armResource
+        id=id
         name=name
         profile=AZURE_USER_ASSIGNED_IDENTITY_RESOURCE_TYPE
         location=location

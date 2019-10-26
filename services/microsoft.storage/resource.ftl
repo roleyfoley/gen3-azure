@@ -7,7 +7,7 @@
         {
             "apiVersion" : "2019-04-01",
             "type" : "Microsoft.Storage/storageAccounts",
-            "conditions" : [ "name_to_lower" ]
+            "conditions" : [ "alphanumeric_only", "name_to_lower" ]
         }
 /]
 
@@ -18,7 +18,7 @@
         {
             "apiVersion" : "2019-04-01",
             "type" : "Microsoft.Storage/storageAccounts/blobServices",
-            "conditions" : [ "parent_to_lower" ]
+            "conditions" : [ "name_to_lower", "parent_to_lower" ]
         }
 /]
 
@@ -29,7 +29,7 @@
         {
             "apiVersion" : "2019-04-01",
             "type" : "Microsoft.Storage/storageAccounts/blobServices/containers",
-            "conditions" : [ "parent_to_lower" ]
+            "conditions" : [ "name_to_lower", "parent_to_lower" ]
         }
 /]
 
@@ -92,7 +92,7 @@
         {
             "name" : [tier, replication]?join("_")
         } +
-        attributeIfContent("restrictions", asArray(reasonCodes))
+        attributeIfContent("restrictions", reasonCodes)
     ]
 [/#function]
 
@@ -115,8 +115,8 @@
         {
             "defaultAction": defaultAction
         } +
-        attributeIfContent("ipRules", asArray(ipRules)) +
-        attributeIfContent("virtualNetworkRules", asArray(virtualNetworkRules)) +
+        attributeIfContent("ipRules", ipRules) +
+        attributeIfContent("virtualNetworkRules", virtualNetworkRules) +
         attributeIfContent("bypass", bypass)
     ]
 [/#function]
@@ -155,11 +155,11 @@
 
     [#return
         {
-            "allowedOrigins": asArray(allowedOrigins),
-            "allowedMethods": asArray(allowedMethods),
+            "allowedOrigins": allowedOrigins,
+            "allowedMethods": allowedMethods,
             "maxAgeInSeconds": maxAgeInSeconds,
-            "exposedHeaders": asArray(exposedHeaders),
-            "allowedHeaders": asArray(allowedHeaders)
+            "exposedHeaders": exposedHeaders,
+            "allowedHeaders": allowedHeaders
         }
     ]
 [/#function]
@@ -169,6 +169,7 @@
 [/#function]
 
 [#macro createStorageAccount
+    id
     name
     sku
     location
@@ -183,6 +184,7 @@
     dependsOn=[]]
 
     [@armResource
+        id=id
         name=name
         profile=AZURE_STORAGEACCOUNT_RESOURCE_TYPE
         kind=kind
@@ -205,8 +207,9 @@
 [/#macro]
 
 [#macro createBlobService
+    id
     name
-    accountId
+    accountName
     CORSBehaviours=[]
     deleteRetentionPolicy={}
     automaticSnapshotPolicyEnabled=false
@@ -232,8 +235,9 @@
     [/#list]
 
     [@armResource
+        id=id
         name=name
-        parentNames=[accountId]
+        parentNames=[accountName]
         profile=AZURE_BLOBSERVICE_RESOURCE_TYPE
         dependsOn=dependsOn
         resources=resources
@@ -242,32 +246,33 @@
             {
                 "defaultServiceVersion": "2019-04-01"
             } + 
-            attributeIfContent("CORSRules", asArray(CORSRules)) +
+            attributeIfContent("CORSRules", CORSRules) +
             attributeIfContent("deleteRetentionPolicy", deleteRetentionPolicy) + 
             attributeIfTrue("automaticSnapshotPolicyEnabled", automaticSnapshotPolicyEnabled, automaticSnapshotPolicyEnabled)
     /]
 [/#macro]
 
 [#macro createBlobServiceContainer
+    id
     name
-    accountId
-    blobId
-    publicAccess=false
+    accountName
+    blobName
+    publicAccess=""
     metadata={}
     resources=[]
     dependsOn=[]]
 
     [@armResource
+        id=id
         name=name
-        parentNames=[accountId, blobId]
+        parentNames=[accountName, blobName]
         profile=AZURE_BLOBSERVICE_CONTAINER_RESOURCE_TYPE
         resources=resources
         dependsOn=dependsOn
         outputs=STORAGE_BLOB_CONTAINER_OUTPUT_MAPPINGS
         properties=
-            {
-                "publicAccess": publicAccess
-            } +
+            {} +
+            attributeIfContent("publicAccess", publicAccess) +
             attributeIfContent("metadata", metadata)
     /]
 [/#macro]

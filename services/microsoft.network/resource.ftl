@@ -87,8 +87,9 @@
   mappings=SUBNET_OUTPUT_MAPPINGS
 /]
 
-[#macro createApplicationSecurityGroup name location tags={}]
+[#macro createApplicationSecurityGroup id name location tags={}]
   [@armResource
+    id=id
     name=name
     profile=AZURE_APPLICATION_SECURITY_GROUP_RESOURCE_TYPE
     location=location
@@ -97,6 +98,7 @@
 [/#macro]
 
 [#macro createNetworkSecurityGroupSecurityRule
+  id
   name
   protocol
   access
@@ -118,6 +120,7 @@
   dependsOn=[]]
 
   [@armResource
+    id=id
     name=name
     profile=AZURE_VIRTUAL_NETWORK_SECURITY_GROUP_SECURITY_RULE_RESOURCE_TYPE
     dependsOn=dependsOn
@@ -146,6 +149,7 @@
 [/#macro]
 
 [#macro createRouteTableRoute
+  id
   name
   nextHopType 
   addressPrefix="" 
@@ -155,6 +159,7 @@
   tags={}]
 
   [@armResource
+    id=id
     name=name
     profile=AZURE_ROUTE_TABLE_ROUTE_RESOURCE_TYPE
     properties=
@@ -171,6 +176,7 @@
 [/#macro]
 
 [#macro createRouteTable
+  id=id
   name
   routes=[]
   disableBgpRoutePropagation=false
@@ -180,6 +186,7 @@
   outputs={}]
 
   [@armResource
+    id=id
     name=name
     profile=AZURE_ROUTE_TABLE_RESOURCE_TYPE
     location=location
@@ -195,6 +202,7 @@
 [/#macro]
 
 [#macro createNetworkSecurityGroup
+  id
   name
   location=""
   tags={}
@@ -204,6 +212,7 @@
   ]
 
   [@armResource
+    id=id
     name=name
     profile=AZURE_VIRTUAL_NETWORK_SECURITY_GROUP_RESOURCE_TYPE
     location=location
@@ -215,6 +224,7 @@
 [/#macro]
 
 [#macro createServiceEndpointPolicyDefinition
+  id
   name
   description=""
   service=""
@@ -223,6 +233,7 @@
   outputs={}]
 
   [@armResource
+    id=id
     name=name
     profile=AZURE_SERVICE_ENDPOINT_POLICY_DEFINITION_RESOURCE_TYPE
     properties=
@@ -236,12 +247,14 @@
 [/#macro]
 
 [#macro createServiceEndpointPolicy
+  id
   name
   location=""
   dependsOn=[]
   tags={}]
 
   [@armResource 
+    id=id
     name=name
     profile=AZURE_SERVICE_ENDPOINT_POLICY_RESOURCE_TYPE
     location=location
@@ -302,6 +315,7 @@
 [/#function]
 
 [#macro createSubnet
+  id=id
   name
   addressPrefix=""
   addressPrefixes=[]
@@ -315,6 +329,7 @@
   delegations=[]]
 
   [@armResource
+    id=id
     name=name
     profile=AZURE_SUBNET_RESOURCE_TYPE
     properties=
@@ -333,6 +348,7 @@
 [/#macro]
 
 [#macro createVnetPeering
+  id
   name
   allowVNetAccess=false
   allowForwardedTraffic=false
@@ -345,6 +361,7 @@
   dependsOn=[]]
 
   [@armResource
+    id=id
     name=name
     profile=AZURE_VIRTUAL_NETWORK_PEERING_RESOURCE_TYPE
     properties=
@@ -362,6 +379,7 @@
 [/#macro]
 
 [#macro createVNet
+  id
   name
   dnsServers=[]
   addressSpacePrefixes=[]
@@ -370,6 +388,7 @@
   dependsOn=[]]
 
   [@armResource
+    id=id
     name=name
     profile=AZURE_VIRTUAL_NETWORK_RESOURCE_TYPE
     location=location
@@ -402,6 +421,7 @@ this implimentation at that time to ensure this object remains correct.
 https://feedback.azure.com/forums/217313-networking/suggestions/37713784-arm-template-support-for-nsg-flow-logs
  --]
 [#macro createNetworkWatcherFlowLog
+  id
   name
   targetResourceId
   storageId
@@ -441,6 +461,7 @@ https://feedback.azure.com/forums/217313-networking/suggestions/37713784-arm-tem
   ]
 
   [@armResource
+    id=id
     name=name
     profile=AZURE_NETWORK_WATCHER_RESOURCE_TYPE
     properties=
