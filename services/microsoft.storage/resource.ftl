@@ -42,10 +42,10 @@
             "Property" : "name"
         },
         URL_ATTRIBUTE_TYPE : {
-            "Property" : "properties.primaryEndpoints.web"
+            "Property" : "properties.primaryEndpoints.blob"
         },
         REGION_ATTRIBUTE_TYPE : {
-            "Property" : "properties.location"
+            "Property" : "properties.primaryLocation"
         }
     }
 ]
@@ -53,10 +53,7 @@
 [#assign STORAGE_BLOB_OUTPUT_MAPPINGS =
     {
         REFERENCE_ATTRIBUTE_TYPE : {
-            "Property" : "id"
-        },
-        NAME_ATTRIBUTE_TYPE : {
-            "Property" : "name"
+            "UseRef" : true
         }
     }
 ]
@@ -64,7 +61,7 @@
 [#assign STORAGE_BLOB_CONTAINER_OUTPUT_MAPPINGS =
     {
         REFERENCE_ATTRIBUTE_TYPE : {
-            "Property" : "id"
+            "UseRef" : true
         },
         NAME_ATTRIBUTE_TYPE : {
             "Property" : "name"
@@ -243,10 +240,8 @@
         resources=resources
         outputs=STORAGE_BLOB_OUTPUT_MAPPINGS
         properties=
-            {
-                "defaultServiceVersion": "2019-04-01"
-            } + 
-            attributeIfContent("CORSRules", CORSRules) +
+            {} + 
+            attributeIfContent("cors", attributeIfContent("CORSRules", CORSRules)) +
             attributeIfContent("deleteRetentionPolicy", deleteRetentionPolicy) + 
             attributeIfTrue("automaticSnapshotPolicyEnabled", automaticSnapshotPolicyEnabled, automaticSnapshotPolicyEnabled)
     /]

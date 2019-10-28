@@ -38,8 +38,64 @@
     /]
 [/#macro]
 
-[#function processResourceNameConditions name profile parents...]
+[#-- Formats a given resourceId into a Azure ARM lookup function for the current state of
+a resource, be it previously deployed or within current template. This differs from
+the previous function as the ARM function will return a full object, from which attributes
+can be referenced via dot notation. --]
+[#function formatAzureResourceReference
+    resourceId
+    resourceName
+    outputType=REFERENCE_ATTRIBUTE_TYPE
+    subscriptionId=""
+    resourceGroupName=""
+    attributes...]
 
+    [#local resourceType = getResourceType(resourceId)]
+    [#local resourceProfile = getAzureResourceProfile(resourceType)]
+    [#local apiVersion = resourceProfile.apiVersion]
+    [#local typeFull = resourceProfile.type]
+    [#local conditions = resourceProfile.conditions]
+    [#local nameSegments = getAzureResourceNameSegments(resourceName)]
+
+    [#if outputType = REFERENCE_ATTRIBUTE_TYPE]
+
+        [#-- return a reference to the resourceId --]
+        [#local args = []]
+        [#list [subscriptionId, resourceGroupName, resourceProfile.type] as arg]
+            [#if arg?has_content]
+                [#local args += [arg]]
+            [/#if]
+        [/#list]
+
+        [#list nameSegments as segment]
+            [#local args += [segment]]
+        [/#list]
+
+        [#return "[resourceId('" + concatenate(args, "', '") + "')]" ]
+    [#else]
+        [#if attributes?size = 1 && attributes?last = "name" ]
+            [#-- "name" isn't a referencable attribute - but we already have access to it. --]
+            [#return resourceName]
+        [#else]
+            [#-- return a reference to the specific resources attributes. --]
+            [#-- Example: "[reference(resourceId(resourceType, resourceName), '0000-00-00', 'Full').properties.attribute]" --]
+            [#return
+                "[reference(resourceId('" + typeFull + "', '" + concatenate(nameSegments, "', '") + "'), '" + apiVersion + "', 'Full')." + (attributes?has_content)?then(attributes?join("."), "") + "]"
+            ]
+        [/#if]
+    [/#if]
+[/#function]
+
+[#-- 
+    Azure has strict rules around resource name "segments" (parts seperated by a '/'). 
+    The rules that must be adhered to are:
+        - A root level resource must have one less segment in the name than the 
+            resource type (typically just the 1 segment).
+        - Child resources must have the same number of segments as the child type.
+            (this is typically 1 for the child, and 1 per parent resource.)
+--]
+[#function formatAzureResourceName name profile primaryParent=""]
+    
     [#local conditions = getAzureResourceProfile(profile).conditions]
     [#local conditions += ["segment_out_names"]]
     [#list conditions as condition]
@@ -51,15 +107,11 @@
                 [#local name = name?lower_case]
                 [#break]
             [#case "parent_to_lower"]
-                [#local parentNamesLower = []]
-                [#list asFlattenedArray(parents) as parent]
-                    [#local parentNamesLower += [parent?lower_case] ]
-                [/#list]
-                [#local parents = parentNamesLower]
+                [#local primaryParent = primaryParent?lower_case ]
                 [#break]
             [#case "segment_out_names"]
                 [#-- This will always happen last --]
-                [#local fullName = formatAzureResourceName(name, parents)]
+                [#local name = formatRelativePath( (primaryParent!""), name) ]
                 [#break]
             [#default]
                 [@fatal
@@ -70,102 +122,12 @@
         [/#switch]
     [/#list]
 
-    [#return 
-        {
-            "name" : name,
-            "fullName" : fullName,
-            "parents" : parents
-        }
-    ]
+    [#return name]
 
 [/#function]
 
-[#-- Formats a given resourceId into an azure resourceId lookup function.
-The scope of the lookup is dependant on the attributes provided. For the
-Id of a resource within the same template, only the resourceId is necessary.
- --]
-[#function formatAzureResourceIdReference
-    resourceId
-    resourceName
-    subscriptionId=""
-    resourceGroupName=""
-    parentNames=[]]
-    
-    [#local resourceType = getResourceType(resourceId)]
-    [#local resourceProfile = getAzureResourceProfile(resourceType)]
-
-    [#local args = []]
-    [#list [subscriptionId, resourceGroupName, resourceProfile.type] as arg]
-        [#if arg?has_content]
-            [#local args += [arg]]
-        [/#if]
-    [/#list]
-
-    [#list parentNames as parent]
-        [#local args += [parent]]
-    [/#list]
-
-    [#-- Ensure the post-processing resource name is included in argsnames --]
-    [#local args += [resourceName]]
-
-    [#return
-        "[resourceId('" + concatenate(args, "', '") + "')]"
-    ]
-
-[/#function]
-
-[#-- 
-    Azure has strict rules around resource name "segments" (parts seperated by a '/'). 
-    The rules that must be adhered to are:
-        - A root level resource must have one less segment in the name than the 
-            resource type (typically just the 1 segment).
-        - Child resources must have the same number of segments as the child type.
-            (this is typically 1 for the child, and 1 per parent resource.)
---]
-[#function formatAzureResourceName name parentNames=[]]
-
-    [#if parentNames?has_content]
-        [#return formatRelativePath( (parentNames![]), name) ]
-    [#else]
-        [#return name]
-    [/#if]
-
-[/#function]
-
-[#-- 
-    Azure has strict rules around resource name "segments" (parts seperated by a '/'). 
-    The rules that must be adhered to are:
-        - A root level resource must have one less segment in the name than the 
-            resource type (typically just the 1 segment).
-        - Child resources must have the same number of segments as the child type.
-            (this is typically 1 for the child, and 1 per parent resource.)
---]
-[#function formatAzureResourceName name parentNames=[]]
-    [#return formatRelativePath( (parentNames![]), name) ]
-[/#function]
-
-[#-- Formats a given resourceId into a Azure ARM lookup function for the current state of
-a resource, be it previously deployed or within current template. This differs from
-the previous function as the ARM function will return a full object, from which attributes
-can be referenced via dot notation. --]
-[#function formatAzureResourceReference
-    resourceId
-    resourceName
-    serviceType=""
-    parentNames=[]
-    attributes... 
-    ]
-
-    [#local resourceType = getResourceType(resourceId)]
-    [#local resourceProfile = getAzureResourceProfile(resourceType)]
-    [#local apiVersion = resourceProfile.apiVersion]
-    [#local typeFull = resourceProfile.type]
-    [#local conditions = resourceProfile.conditions]
-
-    [#-- Example: "[reference(resourceId(resourceType, resourceName), '0000-00-00', 'Full').properties.attribute]" --]
-    [#return
-        "[reference(resourceId('" + typeFull + "', '" + concatenate(parentNames, "', '") + resourceName + "'), '" + apiVersion + "', 'Full')." + (attributes?has_content)?then(attributes?join("."), "") + "]"
-    ]
+[#function getAzureResourceNameSegments resourceName]
+    [#return resourceName?split("/")]
 [/#function]
 
 [#function getAzureResourceProfile resourceType serviceType=""]
@@ -206,7 +168,7 @@ can be referenced via dot notation. --]
     [#return getStackOutput(AZURE_PROVIDER, formatAttributeId(resourceId, attributeType), inDeploymentUnit, inRegion, inAccount) ]
 [/#function]
 
-[#function getReference resourceId resourceName attributeType="" inRegion=""]
+[#--[#function getReference resourceId resourceName attributeType="" inRegion=""]
     [#if !(resourceId?has_content)]
         [#return ""]
     [/#if]
@@ -224,7 +186,7 @@ can be referenced via dot notation. --]
             [#local mapping = getOutputMappings(AZURE_PROVIDER, resourceType, attributeType)]
             [#if (mapping.Attribute)?has_content]
                 [#return
-                    formatAzureResourceReference(resourceId, resourceName, resourceType, "", [], "")
+                    formatAzureResourceReference(resourceId, resourceName, resourceType)
                 ]
             [#else]
                 [#return
@@ -237,7 +199,7 @@ can be referenced via dot notation. --]
             [/#if]
         [/#if]
         [#return
-            formatAzureResourceReference(resourceId, resourceName, "", "", [], "")
+            formatAzureResourceReference(resourceId, resourceName)
         ]
     [/#if]
     [#return
@@ -246,7 +208,7 @@ can be referenced via dot notation. --]
             attributeType,
             inRegion)
     ]
-[/#function]
+[/#function] --]
 
 [#-- Due to azure resource names having multiple segments, Azure requires
 its own function to return the first split of the last segment --]

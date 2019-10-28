@@ -21,9 +21,9 @@
     [#local containerName = resources["container"].Name]
 
     [#-- Process Resource Naming Conditions --]
-    [#local accountNameConfig = processResourceNameConditions(accountName, getResourceType(accountId))]
-    [#local blobNameConfig = processResourceNameConditions(blobName, getResourceType(blobId), accountNameConfig.fullName)]
-    [#local containerNameConfig = processResourceNameConditions(containerName, getResourceType(containerId), accountNameConfig.fullName, blobNameConfig.fullName)]
+    [#local accountName = formatAzureResourceName(accountName, getResourceType(accountId))]
+    [#local blobName = formatAzureResourceName(blobName, getResourceType(blobId), accountName)]
+    [#local containerName = formatAzureResourceName(containerName, getResourceType(containerId), blobName)]
 
     [#local storageProfile = getStorage(occurrence, "storageAccount")]
 
@@ -82,7 +82,7 @@
         provider specific. --]
         [@createStorageAccount
             id=accountId
-            name=accountNameConfig.fullName
+            name=accountName
             kind=storageProfile.Type
             sku=getStorageSku(storageProfile.Tier, storageProfile.Replication)
             location=regionId
@@ -101,8 +101,8 @@
 
         [@createBlobService 
             id=blobId
-            name=blobNameConfig.fullName
-            accountName=accountNameConfig.fullName
+            name=blobName
+            accountName=accountName
             CORSBehaviours=solution.CORSBehaviours
             deleteRetentionPolicy=
                 (solution.Lifecycle.BlobRetentionDays)?has_content?then(
@@ -113,20 +113,20 @@
             resources=[]
             dependsOn=
                 [
-                    formatAzureResourceIdReference(accountId, accountNameConfig.fullName)
+                    formatAzureResourceReference(accountId, accountName)
                 ]
         /]
 
         [@createBlobServiceContainer 
             id=containerId
-            name=containerNameConfig.fullName
-            accountName=accountNameConfig.fullName
+            name=containerName
+            accountName=accountName
             blobName=blobName
             publicAccess=solution.PublicAccess.Enabled
             dependsOn=
                 [
-                    formatAzureResourceIdReference(accountId, accountNameConfig.fullName),
-                    formatAzureResourceIdReference(blobId, blobNameConfig.fullName, "", "", [accountNameConfig.fullName, blobNameConfig.fullName])
+                    formatAzureResourceReference(accountId, accountName),
+                    formatAzureResourceReference(blobId, blobName)
                 ]      
         /]
 

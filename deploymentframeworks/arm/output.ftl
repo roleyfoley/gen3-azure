@@ -107,43 +107,30 @@
     /]
 
     [#list outputs as outputType,outputValue]
-        [#if outputType == REFERENCE_ATTRIBUTE_TYPE]
-
-            [#-- format the ARM function: resourceId() --]
-            [#local reference=formatAzureResourceIdReference(
+        [@armOutput
+            name=(outputType = REFERENCE_ATTRIBUTE_TYPE)?then(
                 id,
-                name,
-                "",
-                "",
-                parentNames
-            )]
-
-            [@armOutput
-                name=id
-                type="string"
-                value=reference
-            /]
-            
-        [#else]
-
-            [#-- format the ARM function: reference() --] 
-            [#local reference=formatAzureResourceReference(
-                id,
-                name,
-                "",
-                parentNames,
-                outputValue.Property!""
-            )]
-    
-            [@armOutput
-                name=formatAttributeId(id, outputType)
-                type=((outputValue.Property?has_content)!false)?then(
+                formatAttributeId(id, outputType)
+            )
+            type=((outputValue.Property!"")?has_content)?then(
+                "string",
+                (outputType = REFERENCE_ATTRIBUTE_TYPE)?then(
                     "string",
                     "object"
                 )
-                value=reference
-            /] 
-        [/#if]
+            )
+            value=formatAzureResourceReference(
+                id,
+                name,
+                outputType,
+                "",
+                "",
+                ((outputValue.Property!"")?has_content)?then(
+                    outputValue.Property,
+                    ""
+                )
+            )
+        /]
     [/#list]
 [/#macro]
 
@@ -167,8 +154,8 @@
                 "outputs":
                     getOutputContent("outputs") +
                     getArmTemplateCoreOutputs()
-            } [#-- +
-            attributeIfContent("COTMessages", logMessages) --]
+            } +
+            attributeIfContent("COTMessages", logMessages) 
         /]
     [/#if]
 [/#macro]
