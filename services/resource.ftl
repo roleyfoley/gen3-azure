@@ -42,7 +42,7 @@
 a resource, be it previously deployed or within current template. This differs from
 the previous function as the ARM function will return a full object, from which attributes
 can be referenced via dot notation. --]
-[#function formatAzureResourceReference
+[#function getReference
     resourceId
     resourceName
     outputType=REFERENCE_ATTRIBUTE_TYPE
@@ -57,32 +57,46 @@ can be referenced via dot notation. --]
     [#local conditions = resourceProfile.conditions]
     [#local nameSegments = getAzureResourceNameSegments(resourceName)]
 
-    [#if outputType = REFERENCE_ATTRIBUTE_TYPE]
 
-        [#-- return a reference to the resourceId --]
-        [#local args = []]
-        [#list [subscriptionId, resourceGroupName, resourceProfile.type] as arg]
-            [#if arg?has_content]
-                [#local args += [arg]]
-            [/#if]
-        [/#list]
+    [#if isPartOfCurrentDeploymentUnit(resourceId)]
+        [#if outputType = REFERENCE_ATTRIBUTE_TYPE]
 
-        [#list nameSegments as segment]
-            [#local args += [segment]]
-        [/#list]
+            [#-- return a reference to the resourceId --]
+            [#local args = []]
+            [#list [subscriptionId, resourceGroupName, resourceProfile.type] as arg]
+                [#if arg?has_content]
+                    [#local args += [arg]]
+                [/#if]
+            [/#list]
 
-        [#return "[resourceId('" + concatenate(args, "', '") + "')]" ]
-    [#else]
-        [#if attributes?size = 1 && attributes?last = "name" ]
-            [#-- "name" isn't a referencable attribute - but we already have access to it. --]
-            [#return resourceName]
+            [#list nameSegments as segment]
+                [#local args += [segment]]
+            [/#list]
+
+            [#return "[resourceId('" + concatenate(args, "', '") + "')]" ]
         [#else]
-            [#-- return a reference to the specific resources attributes. --]
-            [#-- Example: "[reference(resourceId(resourceType, resourceName), '0000-00-00', 'Full').properties.attribute]" --]
-            [#return
-                "[reference(resourceId('" + typeFull + "', '" + concatenate(nameSegments, "', '") + "'), '" + apiVersion + "', 'Full')." + (attributes?has_content)?then(attributes?join("."), "") + "]"
-            ]
+            [#if attributes?size = 1 && attributes?last = "name" ]
+                [#-- "name" isn't a referencable attribute - but we already have access to it. --]
+                [#return resourceName]
+            [#else]
+                [#-- return a reference to the specific resources attributes. --]
+                [#-- Example: "[reference(resourceId(resourceType, resourceName), '0000-00-00', 'Full').properties.attribute]" --]
+                [#return
+                    "[reference(resourceId('" + typeFull + "', '" + concatenate(nameSegments, "', '") + "'), '" + apiVersion + "', 'Full')." + (attributes?has_content)?then(attributes?join("."), "") + "]"
+                ]
+            [/#if]
         [/#if]
+    [#else]
+        [#return getExistingReference(
+            resourceId,
+            attributeType,
+            "",
+            "",
+            (subscriptionId?has_content)?then(
+                subscriptionId,
+                ""
+            )
+        )]
     [/#if]
 [/#function]
 
@@ -167,48 +181,6 @@ can be referenced via dot notation. --]
 [#function getExistingReference resourceId attributeType="" inRegion="" inDeploymentUnit="" inAccount=(accountObject.AZUREId)!""]
     [#return getStackOutput(AZURE_PROVIDER, formatAttributeId(resourceId, attributeType), inDeploymentUnit, inRegion, inAccount) ]
 [/#function]
-
-[#--[#function getReference resourceId resourceName attributeType="" inRegion=""]
-    [#if !(resourceId?has_content)]
-        [#return ""]
-    [/#if]
-    [#if resourceId?is_hash]
-        [#return
-            {
-                "Ref" : value.Ref
-            }
-        ]
-    [/#if]
-    [#if ((!(inRegion?has_content)) || (inRegion == region)) &&
-        isPartOfCurrentDeploymentUnit(resourceId)]
-        [#if attributeType?has_content]
-            [#local resourceType = getResourceType(resourceId)]
-            [#local mapping = getOutputMappings(AZURE_PROVIDER, resourceType, attributeType)]
-            [#if (mapping.Attribute)?has_content]
-                [#return
-                    formatAzureResourceReference(resourceId, resourceName, resourceType)
-                ]
-            [#else]
-                [#return
-                    {
-                        "Mapping" : "COTFatal: Unknown Resource Type",
-                        "ResourceId" : resourceId,
-                        "ResourceType" : resourceType
-                    }
-                ]
-            [/#if]
-        [/#if]
-        [#return
-            formatAzureResourceReference(resourceId, resourceName)
-        ]
-    [/#if]
-    [#return
-        getExistingReference(
-            resourceId,
-            attributeType,
-            inRegion)
-    ]
-[/#function] --]
 
 [#-- Due to azure resource names having multiple segments, Azure requires
 its own function to return the first split of the last segment --]

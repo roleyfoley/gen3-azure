@@ -119,7 +119,7 @@
                     "object"
                 )
             )
-            value=formatAzureResourceReference(
+            value=getReference(
                 id,
                 name,
                 outputType,
@@ -154,8 +154,8 @@
                 "outputs":
                     getOutputContent("outputs") +
                     getArmTemplateCoreOutputs()
-            } +
-            attributeIfContent("COTMessages", logMessages) 
+            } [#-- +
+            attributeIfContent("COTMessages", logMessages) --]
         /]
     [/#if]
 [/#macro]

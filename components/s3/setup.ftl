@@ -113,7 +113,7 @@
             resources=[]
             dependsOn=
                 [
-                    formatAzureResourceReference(accountId, accountName)
+                    getReference(accountId, accountName)
                 ]
         /]
 
@@ -125,8 +125,8 @@
             publicAccess=solution.PublicAccess.Enabled
             dependsOn=
                 [
-                    formatAzureResourceReference(accountId, accountName),
-                    formatAzureResourceReference(blobId, blobName)
+                    getReference(accountId, accountName),
+                    getReference(blobId, blobName)
                 ]      
         /]
 
