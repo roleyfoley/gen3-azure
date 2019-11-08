@@ -42,7 +42,6 @@
             "Attributes" : {
                 "ACCOUNT_NAME" : getExistingReference(storageAccountId, NAME_ATTRIBUTE_TYPE),
                 "CONTAINER_NAME" : getExistingReference(containerId, NAME_ATTRIBUTE_TYPE),
-                "BLOB_NAME" : getExistingReference(blobId, NAME_ATTRIBUTE_TYPE),
                 "WEBSITE_URL" : getExistingReference(storageAccountId, URL_ATTRIBUTE_TYPE)
             },
             "Roles" : {

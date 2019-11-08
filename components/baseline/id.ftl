@@ -1,6 +1,6 @@
 [#ftl]
 [@addResourceGroupInformation
-    type=S3_COMPONENT_TYPE
+    type=BASELINE_COMPONENT_TYPE
     attributes=
         [
             {
@@ -30,12 +30,6 @@
                         "Description" : "The directory service that is used for authentication. 'None' or 'AADDS'.",
                         "Type" : STRING_TYPE,
                         "Default" : ""
-                    },
-                    {
-                        "Names" : "PublicAccess",
-                        "Type" : STRING_TYPE,
-                        "Values" : [ "Container", "Blob", "None" ],
-                        "Default" : "None"
                     }
                 ]
             }
@@ -44,6 +38,8 @@
     resourceGroup=DEFAULT_RESOURCE_GROUP
     services=
         [
+            AZURE_BASELINE_PSEUDO_SERVICE,
+            AZURE_KEYVAULT_SERVICE,
             AZURE_STORAGE_SERVICE
         ]
 /]

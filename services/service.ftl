@@ -16,6 +16,9 @@
 [#-- Microsoft.Compute --]
 [#assign AZURE_VIRTUALMACHINE_SERVICE = "microsoft.compute"]
 
+[#-- Microsoft.KeyVault --]
+[#assign AZURE_KEYVAULT_SERVICE = "microsoft.keyvault"]
+
 [#-- Microsoft.ManagedIdentity --]
 [#assign AZURE_IAM_SERVICE = "microsoft.managedidentity"]
 

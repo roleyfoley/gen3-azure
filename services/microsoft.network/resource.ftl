@@ -131,15 +131,15 @@
         "protocol" : protocol
       } +
       attributeIfContent("sourceAddressPrefix", sourceAddressPrefix) +
-      attributeIfContent("sourceAddressPrefixes", asArray(sourceAddressPrefixes)) +
+      attributeIfContent("sourceAddressPrefixes", sourceAddressPrefixes) +
       attributeIfContent("sourcePortRange", sourcePortRange) +
-      attributeIfContent("sourcePortRanges, asArray(sourcePortRanges)) +
-      attributeIfContent("sourceApplicationSecurityGroups", asArray(sourceApplicationSecurityGroups)) +
+      attributeIfContent("sourcePortRanges, sourcePortRanges) +
+      attributeIfContent("sourceApplicationSecurityGroups", sourceApplicationSecurityGroups) +
       attributeIfContent("destinationPortRange", destinationPortRange) +
-      attributeIfContent("destinationPortRanges", asArray(destinationPortRanges)) +
+      attributeIfContent("destinationPortRanges", destinationPortRanges) +
       attributeIfContent("destinationAddressPrefix", destinationAddressPrefix) +
-      attributeIfContent("destinationAddressPrefixes", asArray(destinationAddressPrefixes)) +
-      attributeIfContent("destinationApplicationSecurityGroups", asArray(destinationApplicationSecurityGroups)) +
+      attributeIfContent("destinationAddressPrefixes", destinationAddressPrefixes) +
+      attributeIfContent("destinationApplicationSecurityGroups", destinationApplicationSecurityGroups) +
       attributeIfContent("description", description) +
       attributeIfContent("priority", priority)
     tags=tags
@@ -193,7 +193,7 @@
     tags=tags
     properties=
       {} +
-      attributeIfContent("routes", asArray(routes)) +
+      attributeIfContent("routes", routes) +
       attributeIfTrue("disableBgpRoutePropagation", disableBgpRoutePropagation, disableBgpRoutePropagation)
     dependsOn=dependsOn
     outputs=outputs
@@ -240,7 +240,7 @@
       {} +
       attributeIfContent("description", description) +
       attributeIfContent("service", service) +
-      attributeIfContent("serviceResources", asArray(serviceResources))
+      attributeIfContent("serviceResources", serviceResources)
     dependsOn=dependsOn
     outputs=outputs
   /]
@@ -273,7 +273,7 @@
     {} +
     attributeIfContent("id", getReference(id))
     attributeIfContent("serviceName", serviceName) +
-    attributeIfContent("actions", asArray(actions))
+    attributeIfContent("actions", actions)
   ]
 
   [#return
@@ -310,7 +310,7 @@
   [#return
     {} + 
     attributeIfContent("service", serviceType) +
-    attributeIfContent("locations", asArray(locations))
+    attributeIfContent("locations", locations)
   ]
 [/#function]
 
@@ -335,15 +335,15 @@
     properties=
       {} +
       attributeIfContent("addressPrefix", addressPrefix) +
-      attributeIfContent("addressPrefixes", asArray(addressPrefixes)) +
+      attributeIfContent("addressPrefixes", addressPrefixes) +
       attributeIfContent("networkSecurityGroup", networkSecurityGroup) +
       attributeIfContent("routeTable", routeTable) +
       attributeIfContent("natGateway", { "id" : natGatewayId } ) +
-      attributeIfContent("serviceEndpoints", asArray(serviceEndpoints)) +
-      attributeIfContent("serviceEndpointPolicies", asArray(serviceEndpointPolicies)) +
-      attributeIfContent("resourceNavigationLinks", asArray(resourceNavigationLinks)) +
-      attributeIfContent("serviceAssociationLinks", asArray(serviceAssociationLinks)) +
-      attributeIfContent("delegations", asArray(delegations))
+      attributeIfContent("serviceEndpoints", serviceEndpoints) +
+      attributeIfContent("serviceEndpointPolicies", serviceEndpointPolicies) +
+      attributeIfContent("resourceNavigationLinks", resourceNavigationLinks) +
+      attributeIfContent("serviceAssociationLinks", serviceAssociationLinks) +
+      attributeIfContent("delegations", delegations)
   /]
 [/#macro]
 
@@ -371,7 +371,7 @@
       attributeIfTrue("allowGatewayTransit", allowGatewayTransit, allowGatewayTransit) +
       attributeIfTrue("useRemoteGateways", useRemoteGateways, useRemoteGateways) +
       attributeIfContent("remoteVirtualNetwork", { "id" : remoteVirtualNetworkId } ) +
-      attributeIfContent("remoteAddressSpace", { "addressPrefixes" : asArray(remoteAddressSpacePrefixes) } ) +
+      attributeIfContent("remoteAddressSpace", { "addressPrefixes" : remoteAddressSpacePrefixes } ) +
       attributeIfContent("peeringState", peeringState)
     outputs=outputs
     dependsOn=dependsOn
@@ -401,7 +401,7 @@
         {} + 
         attributeIfContent(
           "addressPrefixes", 
-          asArray(addressSpacePrefixes)
+          addressSpacePrefixes
         )
       ) +
       attributeIfContent(
@@ -409,7 +409,7 @@
         {} +
         attributeIfContent(
           "dnsServers", 
-          asArray(dnsServers)
+          dnsServers
         )
       )
   /]

@@ -100,6 +100,22 @@ can be referenced via dot notation. --]
     [/#if]
 [/#function]
 
+[#--Formats a reference to a subscription's attributes:
+id, subscriptionId, tenantId or displayName --]
+[#function formatAzureSubscriptionReference attribute=""]
+ [#return
+    "[subscription()" + (attribute?has_content)?then(attribute?ensure_starts_with("."), "") + "]"
+ ]
+[/#function]
+
+[#--Formats a reference to a resourceGroups attributes:
+id, name, type, location, managedBy, tags, properties.provisioningState --]
+[#function formatAzureResourceGroupReference attribute=""]
+ [#return
+    "[resourceGroup()" + (attribute?has_content)?then(attribute?ensure_starts_with("."), "") + "]"
+ ]
+[/#function]
+
 [#-- 
     Azure has strict rules around resource name "segments" (parts seperated by a '/'). 
     The rules that must be adhered to are:
@@ -116,6 +132,10 @@ can be referenced via dot notation. --]
         [#switch condition]
             [#case "alphanumeric_only"]
                 [#local name = name?split("-")?join("")]
+                [#break]
+            [#case "globally_unique"]
+                [#local segmentSeed = getStackOutput(AZURE_PROVIDER, formatSegmentSeedId())]
+                [#local name = name?ensure_ends_with(segmentSeed)]
                 [#break]
             [#case "name_to_lower"]
                 [#local name = name?lower_case]
@@ -178,7 +198,7 @@ can be referenced via dot notation. --]
 [/#function]
 
 [#-- Get stack output --]
-[#function getExistingReference resourceId attributeType="" inRegion="" inDeploymentUnit="" inAccount=(accountObject.AZUREId)!""]
+[#function getExistingReference resourceId attributeType="" inRegion="" inDeploymentUnit="" inAccount=(accountObject.AWSId)!""]
     [#return getStackOutput(AZURE_PROVIDER, formatAttributeId(resourceId, attributeType), inDeploymentUnit, inRegion, inAccount) ]
 [/#function]
 

@@ -10,11 +10,17 @@
     ]
 [/#function]
 
-[#function getArmTemplateCoreOutputs deploymentUnit=deploymentUnit]
+[#function getArmTemplateCoreOutputs 
+    region=formatAzureResourceGroupReference("location")
+    account=formatAzureSubscriptionReference("id")
+    resourceGroup=formatAzureResourceGroupReference("id")
+    deploymentUnit=getDeploymentUnit()
+    deploymentMode=commandLineOptions.Deployment.Mode]
+
     [#return {
-        "Subscription": { "type": "string", "value": "[subscription().id]"},
-        "ResourceGroup": { "type": "string", "value": "[resourceGroup().id]"},
-        "Region": { "type": "string", "value": "[resourceGroup().location]"},
+        "Subscription": { "type": "string", "value": account },
+        "ResourceGroup": { "type": "string", "value": resourceGroup },
+        "Region": { "type": "string", "value": region },
         "DeploymentUnit": {
             "type": "string",
             "value": 
@@ -26,7 +32,8 @@
                     "-" + deploymentUnitSubset?lower_case,
                     ""
                 )
-        }
+        },
+        "DeploymentMode" : { "type": "string", "value" : deploymentMode }
     }]
 [/#function]
 
@@ -43,6 +50,34 @@
             }
     /]
 [/#macro]
+
+[#function pseudoArmStackOutputScript description outputs filesuffix=""]
+    [#local outputString = ""]
+
+    [#list getArmTemplateCoreOutputs(region, accountObject.AWSId, commandLineOptions.Deployment.ResourceGroup.Name) as key,value]
+        [#if value?is_hash]
+            [#local outputs += { key, value.value }]
+        [#else]
+            [#local outputs += { key, value }]
+        [/#if]
+    [/#list]
+
+    [#list outputs as key,value]
+        [#local outputString +=
+          "\"" + key + "\" \"" + value + "\" "
+        ]
+    [/#list]
+
+    [#return
+        [
+            "create_pseudo_stack" + " " +
+            "\"" + description + "\"" + " " +
+            "\"$\{CF_DIR}/$(fileBase \"$\{BASH_SOURCE}\")" + (filesuffix?has_content)?then("-" + filesuffix, "") + "-pseudo-stack.json\" " +
+            outputString + " || return $?"
+        ]
+    ]
+
+[/#function]
 
 [#macro armResource
     id
@@ -154,8 +189,8 @@
                 "outputs":
                     getOutputContent("outputs") +
                     getArmTemplateCoreOutputs()
-            } [#-- +
-            attributeIfContent("COTMessages", logMessages) --]
+            } +
+            attributeIfContent("COTMessages", logMessages)
         /]
     [/#if]
 [/#macro]

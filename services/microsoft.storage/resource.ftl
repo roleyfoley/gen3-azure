@@ -7,7 +7,7 @@
         {
             "apiVersion" : "2019-04-01",
             "type" : "Microsoft.Storage/storageAccounts",
-            "conditions" : [ "alphanumeric_only", "name_to_lower" ]
+            "conditions" : [ "alphanumeric_only", "name_to_lower", "globally_unique" ]
         }
 /]
 
