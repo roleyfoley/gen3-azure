@@ -49,13 +49,13 @@
 
 [#list networkResourceProfiles as resource,attributes]
   [@addResourceProfile
-      service=AZURE_NETWORK_SERVICE
-      resource=resource
-      profile=
-          {
-              "apiVersion" : attributes.apiVersion,
-              "type" : attributes.type
-          }
+    service=AZURE_NETWORK_SERVICE
+    resource=resource
+    profile=
+      {
+        "apiVersion" : attributes.apiVersion,
+        "type" : attributes.type
+      }
   /]
 [/#list]
 
@@ -70,7 +70,7 @@
 [#assign SUBNET_OUTPUT_MAPPINGS =
   {
     REFERENCE_ATTRIBUTE_TYPE : {
-      "Property : "id"
+      "Property" : "id"
     }
   }
 ]
@@ -100,6 +100,7 @@
 [#macro createNetworkSecurityGroupSecurityRule
   id
   name
+  nsgName
   protocol
   access
   direction
@@ -114,7 +115,7 @@
   destinationAddressPrefixes=""
   destinationApplicationSecurityGroups=[]
   description=""
-  priority=""
+  priority=4096
   tags={}
   outputs={}
   dependsOn=[]]
@@ -122,6 +123,7 @@
   [@armResource
     id=id
     name=name
+    parentNames=[nsgName]
     profile=AZURE_VIRTUAL_NETWORK_SECURITY_GROUP_SECURITY_RULE_RESOURCE_TYPE
     dependsOn=dependsOn
     properties=  
@@ -133,7 +135,7 @@
       attributeIfContent("sourceAddressPrefix", sourceAddressPrefix) +
       attributeIfContent("sourceAddressPrefixes", sourceAddressPrefixes) +
       attributeIfContent("sourcePortRange", sourcePortRange) +
-      attributeIfContent("sourcePortRanges, sourcePortRanges) +
+      attributeIfContent("sourcePortRanges", sourcePortRanges) +
       attributeIfContent("sourceApplicationSecurityGroups", sourceApplicationSecurityGroups) +
       attributeIfContent("destinationPortRange", destinationPortRange) +
       attributeIfContent("destinationPortRanges", destinationPortRanges) +
@@ -162,10 +164,7 @@
     id=id
     name=name
     profile=AZURE_ROUTE_TABLE_ROUTE_RESOURCE_TYPE
-    properties=
-      {
-        "nextHopType" : nextHopType
-      } + 
+    properties={ "nextHopType" : nextHopType } + 
       attributeIfContent("addressPrefix", addressPrefix) +
       attributeIfContent("nextHopIpAddress", nextHopIpAddress)
     dependsOn=dependsOn
@@ -176,7 +175,7 @@
 [/#macro]
 
 [#macro createRouteTable
-  id=id
+  id
   name
   routes=[]
   disableBgpRoutePropagation=false
@@ -191,8 +190,7 @@
     profile=AZURE_ROUTE_TABLE_RESOURCE_TYPE
     location=location
     tags=tags
-    properties=
-      {} +
+    properties={} +
       attributeIfContent("routes", routes) +
       attributeIfTrue("disableBgpRoutePropagation", disableBgpRoutePropagation, disableBgpRoutePropagation)
     dependsOn=dependsOn
@@ -208,8 +206,7 @@
   tags={}
   resources=[]
   dependsOn=[]
-  outputs={}
-  ]
+  outputs={}]
 
   [@armResource
     id=id
@@ -236,8 +233,7 @@
     id=id
     name=name
     profile=AZURE_SERVICE_ENDPOINT_POLICY_DEFINITION_RESOURCE_TYPE
-    properties=
-      {} +
+    properties={} +
       attributeIfContent("description", description) +
       attributeIfContent("service", service) +
       attributeIfContent("serviceResources", serviceResources)
@@ -269,15 +265,13 @@
   serviceName=""
   actions=[]]
 
-  [#local properties=
-    {} +
-    attributeIfContent("id", getReference(id))
+  [#local properties = {} +
+    attributeIfContent("id", getReference(id)) +
     attributeIfContent("serviceName", serviceName) +
     attributeIfContent("actions", actions)
   ]
 
-  [#return
-    {} +
+  [#return {} +
     attributeIfContent("id", id) + 
     attributeIfContent("name", name) +
     attributeIfContent("properties", properties)
@@ -290,33 +284,32 @@
   linkedResourceType=""
   resourceLink=""]
 
-  [#local properties=
-    {} +
+  [#local properties = {} +
     attributeIfContent("linkedResourceType", linkedResourceType) +
     attributeIfContent("link", resourceLink)
   ]
 
-  [#return
-    {} +
+  [#return {} +
     attributeIfContent("id", getReference(id)) +
     attributeIfContent("name", getReference(resourceName)) +
     attributeIfContent("properties", properties)
   ]
 [/#function]
+
 [#function getSubnetServiceEndpoint
   serviceType=""
   locations=[]]
 
-  [#return
-    {} + 
+  [#return {} + 
     attributeIfContent("service", serviceType) +
     attributeIfContent("locations", locations)
   ]
 [/#function]
 
 [#macro createSubnet
-  id=id
+  id
   name
+  vnetName
   addressPrefix=""
   addressPrefixes=[]
   networkSecurityGroup={}
@@ -326,24 +319,26 @@
   serviceEndpointPolicies=[]
   resourceNavigationLinks=[]
   serviceAssociationLinks=[]
-  delegations=[]]
+  delegations=[]
+  dependsOn=[]]
 
   [@armResource
     id=id
     name=name
+    parentNames=[vnetName]
     profile=AZURE_SUBNET_RESOURCE_TYPE
-    properties=
-      {} +
+    properties={} +
       attributeIfContent("addressPrefix", addressPrefix) +
       attributeIfContent("addressPrefixes", addressPrefixes) +
       attributeIfContent("networkSecurityGroup", networkSecurityGroup) +
       attributeIfContent("routeTable", routeTable) +
-      attributeIfContent("natGateway", { "id" : natGatewayId } ) +
+      attributeIfContent("natGateway", attributeIfContent("id", natGatewayId)) +
       attributeIfContent("serviceEndpoints", serviceEndpoints) +
       attributeIfContent("serviceEndpointPolicies", serviceEndpointPolicies) +
       attributeIfContent("resourceNavigationLinks", resourceNavigationLinks) +
       attributeIfContent("serviceAssociationLinks", serviceAssociationLinks) +
       attributeIfContent("delegations", delegations)
+    dependsOn=dependsOn
   /]
 [/#macro]
 
@@ -364,8 +359,7 @@
     id=id
     name=name
     profile=AZURE_VIRTUAL_NETWORK_PEERING_RESOURCE_TYPE
-    properties=
-      {} +
+    properties={} +
       attributeIfTrue("allowVNetAccess", allowVNetAccess, allowVNetAccess) +
       attributeIfTrue("allowForwardedTraffic", allowForwardedTraffic, allowForwardedTraffic) +
       attributeIfTrue("allowGatewayTransit", allowGatewayTransit, allowGatewayTransit) +
@@ -394,32 +388,22 @@
     location=location
     outputs=outputs
     dependsOn=dependsOn
-    properties=
-      {} +
-      attributeIfContent(
-        "addressSpace",
-        {} + 
-        attributeIfContent(
-          "addressPrefixes", 
-          addressSpacePrefixes
-        )
+    properties={} +
+      attributeIfContent("addressSpace", {} + 
+        attributeIfContent("addressPrefixes", addressSpacePrefixes)
       ) +
-      attributeIfContent(
-        "dhcpOptions",
-        {} +
-        attributeIfContent(
-          "dnsServers", 
-          dnsServers
-        )
+      attributeIfContent("dhcpOptions", {} +
+        attributeIfContent("dnsServers", dnsServers)
       )
   /]
 [/#macro]
 
-[#-- TODO(rossmurr4y): Flow Logs object is not currently supported, though exists when created
-via PowerShell. This is being developed by Microsoft and expected Jan 2020 - will need to revisit
-this implimentation at that time to ensure this object remains correct.
-https://feedback.azure.com/forums/217313-networking/suggestions/37713784-arm-template-support-for-nsg-flow-logs
- --]
+[#-- 
+  TODO(rossmurr4y): Flow Logs object is not currently supported, though exists when created
+  via PowerShell. This is being developed by Microsoft and expected Jan 2020 - will need to revisit
+  this implimentation at that time to ensure this object remains correct.
+  https://feedback.azure.com/forums/217313-networking/suggestions/37713784-arm-template-support-for-nsg-flow-logs
+--]
 [#macro createNetworkWatcherFlowLog
   id
   name
@@ -436,36 +420,25 @@ https://feedback.azure.com/forums/217313-networking/suggestions/37713784-arm-tem
   outputs={}
   dependsOn=[]]
 
-  [#local networkWatcherFlowAnalyticsConfiguration =
-    { "enabled" : true } +
+  [#local networkWatcherFlowAnalyticsConfiguration = { "enabled" : true } +
     attributeIfContent("workspaceId", workspaceId) +
-    attributeIfContent("trafficAnalyticsInterval", trafficAnalyticsInterval)
-  ]
+    attributeIfContent("trafficAnalyticsInterval", trafficAnalyticsInterval)]
 
-  [#local flowAnalyticsConfiguration =
-    { 
-      "networkWatcherFlowAnalyticsConfiguration" : networkWatcherFlowAnalyticsConfiguration
-    }
-  ]
+  [#local flowAnalyticsConfiguration = { "networkWatcherFlowAnalyticsConfiguration" : networkWatcherFlowAnalyticsConfiguration }]
 
-  [#local retentionPolicy=
-    {} +
+  [#local retentionPolicy = {} +
     attributeIfContent("days", retentionDays) +
-    attributeIfTrue("enabled", retentionPolicyEnabled, retentionPolicyEnabled)
-  ]
+    attributeIfTrue("enabled", retentionPolicyEnabled, retentionPolicyEnabled)]
 
-  [#local format=
-    {}+
+  [#local format = {} +
     attributeIfContent("type", formatType) +
-    attributeIfContent("version", formatVersion)
-  ]
+    attributeIfContent("version", formatVersion)]
 
   [@armResource
     id=id
     name=name
     profile=AZURE_NETWORK_WATCHER_RESOURCE_TYPE
-    properties=
-      { "enabled" : true } +
+    properties={ "enabled" : true } +
       attributeIfContent("targetResourceId", getReference(targetResourceId)) +
       attributeIfContent("targetResourceGuid", targetResourceGuid) +
       attributeIfContent("storageId", storageId) +

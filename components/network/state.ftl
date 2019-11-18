@@ -7,8 +7,10 @@
 
   [#local vnetId = formatVirtualNetworkId(core.Id)]
   [#local vnetName = core.FullName]
-  [#local networkSecurityGroupId = formatDependentNetworkSecurityGroupId(vnetId)]
-  [#local nsgFlowlogId = formatDependentNetworkWatcherId(networkSecurityGroupId)]
+  [#local nsgId = formatDependentNetworkSecurityGroupId(vnetId)]
+  [#local nsgName = formatName(core.Name)]
+  [#local nsgFlowlogId = formatDependentNetworkWatcherId(nsgId)]
+  [#local nsgFlowlogName = formatName(core.Name)]
 
   [#local nsgFlowLogEnabled = environmentObject.Operations.FlowLogs.Enabled!
     segmentObject.Operations.FlowLogs.Enabled!
@@ -41,7 +43,7 @@
 
     [#list zones as zone]
       [#local subnetId = formatDependentSubnetId(core.Id, networkTier.Id, zone.Id)]
-      [#local subnetName = formatName(core.FullName, networkTier.Name, zone.Name)]
+      [#local subnetName = formatName(networkTier.Name, zone.Name)]
       [#local subnetAddress = addressOffset + (networkTier.Network.Index * addressesPerTier) + (zone.Index * addressesPerZone)]
       [#local subnetCIDR = baseAddress[0] + "." + baseAddress[1] + "." + (subnetAddress/256)?int + "." + subnetAddress%256 + "/" + subnetMask]
       [#local routeId = formatDependentRouteTableRouteId(subnetId)]
@@ -65,7 +67,7 @@
     [/#list]
   [/#list]
 
-  [#assign componentState=
+  [#assign componentState =
     {
       "Resources" : {
         "vnet" : {
@@ -74,15 +76,21 @@
           "Address" : networkAddress + "/" + networkMask,
           "Type" : AZURE_VIRTUAL_NETWORK_RESOURCE_TYPE
         },
-        "subnets" : subnets
-      }
-      nsgFlowLogEnabled?then(
+        "subnets" : subnets,
+        "networkSecurityGroup" : {
+          "Id" : nsgId,
+          "Name" : nsgName,
+          "Type" : AZURE_VIRTUAL_NETWORK_SECURITY_GROUP_RESOURCE_TYPE
+        }
+      } +
+      attributeIfTrue(
+        "flowlogs", 
+        nsgFlowLogEnabled, 
         {
-          "flowlogs" : {
-            "networkWatcherFlowlog" : {
-              "Id" : nsgFlowlogId,
-              "Type" : AZURE_NETWORK_WATCHER_RESOURCE_TYPE
-            }
+          "networkWatcherFlowlog" : { 
+            "Id" : nsgFlowlogId,
+            "Name" : nsgFlowlogName,
+            "Type" : AZURE_NETWORK_WATCHER_RESOURCE_TYPE
           }
         }
       ),
@@ -146,15 +154,13 @@ resource. It remains "networkacl" in name to ensure there is no clash
 with any future networkSecurityGroup components. When referring to
 the Resource alone, it will remain NetworkSecurityGroup for clarity
 as Azure does not have NetworkACLs.--]
-[#macro azure_networkacl_arm_state occurence parent={} baseState={}]
+[#macro azure_networkacl_arm_state occurrence parent={} baseState={}]
 
   [#local core = occurrence.Core]
   [#local solution = occurrence.Configuration.Solution]
 
   [#local vnetId = formatVirtualNetworkId(core.Id)]
-  [#local networkSecurityGroupId = formatDependentNetworkSecurityGroupId(vnetId)]
-  [#local nsgId = formatNetworkSecurityGroupId(core.Id)]
-  [#local nsgName = formatName(core.Name)]
+  [#local nsgId = formatDependentNetworkSecurityGroupId(vnetId)]
 
   [#list segmentObject.Network.Tiers.Order as tierId]
   
@@ -170,7 +176,7 @@ as Azure does not have NetworkACLs.--]
       [#list solution.Rules as id, rule]
         [#local networkSecurityGroupRules += {
           rule.Id : {
-            "Id" : formatDependentSecurityRuleId(networkSecurityGroupId, rule.Id),
+            "Id" : formatDependentSecurityRuleId(nsgId, rule.Id),
             "Type" : AZURE_VIRTUAL_NETWORK_SECURITY_GROUP_SECURITY_RULE_RESOURCE_TYPE
           }
         }]
@@ -182,11 +188,6 @@ as Azure does not have NetworkACLs.--]
   [#assign componentState =
     {
       "Resources" : {
-        "networkSecurityGroup" : {
-          "Id" : nsgId,
-          "Name" : nsgName,
-          "Type" : AZURE_VIRTUAL_NETWORK_SECURITY_GROUP_RESOURCE_TYPE
-        },
         "rules" : networkSecurityGroupRules
       },
       "Attributes" : {},

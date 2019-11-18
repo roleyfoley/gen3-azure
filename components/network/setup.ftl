@@ -31,6 +31,7 @@
 
     [#-- 1. Vnet --]
     [@createVNet
+      id=vnetId
       name=vnetName
       location=regionId
       addressSpacePrefixes=[vnetCIDR]
@@ -41,6 +42,7 @@
     [#local networkSecurityGroupName = resources["networkSecurityGroup"].Name]
 
     [@createNetworkSecurityGroup
+      id=networkSecurityGroupId
       name=networkSecurityGroupName
       location=regionId
     /]
@@ -49,7 +51,12 @@
     To be overridden on applicable tiers by specific rules. --]
 
     [@createNetworkSecurityGroupSecurityRule
-      name=formatName(networkSecurityGroupName, "DenyAllInbound")
+      id=formatDependentSecurityRuleId(vnetId, "DenyAllInbound")
+      name=formatAzureResourceName(
+        "DenyAllInbound",
+        getResourceType(formatDependentSecurityRuleId(vnetId, "DenyAllInbound")),
+        networkSecurityGroupName)
+      nsgName=networkSecurityGroupName
       description="Deny All Inbound"
       protocol="*"
       sourcePortRange="*"
@@ -57,12 +64,21 @@
       sourceAddressPrefix="0.0.0.0/0"
       destinationAddressPrefix="0.0.0.0/0"
       access="Deny"
-      priority="64999"
+      priority=4096
       direction="Inbound"
+      dependsOn=
+        [
+          getReference(networkSecurityGroupId, networkSecurityGroupName)
+        ]
     /]
 
     [@createNetworkSecurityGroupSecurityRule
-      name=formatName(networkSecurityGroupName, "DenyAllOutbound")
+      id=formatDependentSecurityRuleId(vnetId, "DenyAllOutbound")
+      name=formatAzureResourceName(
+        "DenyAllOutbound",
+        getResourceType(formatDependentSecurityRuleId(vnetId, "DenyAllOutbound")),
+        networkSecurityGroupName)
+      nsgName=networkSecurityGroupName
       description="Deny All Outbound"
       protocol="*"
       sourcePortRange="*"
@@ -70,8 +86,12 @@
       sourceAddressPrefix="0.0.0.0/0"
       destinationAddressPrefix="0.0.0.0/0"
       access="Deny"
-      priority="64998"
+      priority=4095
       direction="Outbound"
+      dependsOn=
+        [
+          getReference(networkSecurityGroupId, networkSecurityGroupName)
+        ]
     /]
 
     [#-- 3. Subnets for every tier & zone --]
@@ -99,27 +119,38 @@
               }
           /]
         [/#if]
-
         [#local routeTable = getLinkTarget(occurrence, networkLink + { "RouteTable" : routeTableId }, false)]
         [#local routeTableZones = routeTable.State.Resources["routeTables"]]
-
-        [#local networkACL = getLinkTarget(occurrence, networkLink + { "NetworkACL" : networkACLId }, false)]
-        [#local networkSecurityGroupZones = networkACL.State.Resources["networkSecurityGroups"]]
 
         [#list zones as zone]
 
           [#if zoneSubnets[zone.Id]?has_content]
 
             [#local zoneSubnetResources = zoneSubnets[zone.Id]]
-            [#local subnetName = zoneSubnetResources["subnet"].Name]
+            [#local subnetId = zoneSubnetResources["subnet"].Id]
+
+            [#local subnetName = formatAzureResourceName(
+              zoneSubnetResources["subnet"].Name,
+              AZURE_SUBNET_RESOURCE_TYPE,
+              vnetName)]
+
             [#local subnetAddress = zoneSubnetResources["subnet"].Address]
             [#local routeTableId = (routeTableZones[zone.Id]["routeTable"]).Id]
+            [#local routeTableName = (routeTableZones[zone.Id]["routeTable"]).Name]
 
             [@createSubnet
+              id=subnetId
               name=subnetName
+              vnetName=vnetName
               addressPrefix=subnetAddress
-              networkSecurityGroup={ "id" : networkSecurityGroupId }
-              routeTable= { "id" : routeTableId }     
+              networkSecurityGroup={ "id" : getReference(networkSecurityGroupId, networkSecurityGroupName) }
+              routeTable= { "id" : getReference(routeTableId, routeTableName) }     
+              dependsOn=
+                [
+                  getReference(vnetId, vnetName),
+                  getReference(networkSecurityGroupId, networkSecurityGroupName),
+                  getReference(routeTableId, routeTableName)
+                ]
             /]
 
           [/#if]
@@ -144,11 +175,13 @@
         [#list zones as zone]
           [#if zoneRouteTables[zone.Id]?has_content]
             [#local zoneRouteTableResources = zoneRouteTables[zone.Id]]
+            [#local routeTableId = zoneRouteTableResources["routeTable"].Id]
             [#local routeTableName = zoneRouteTableResources["routeTable"].Name]
 
             [@createRouteTable
+              id=routeTableId
               name=routeTableName
-              location=zone.AzureId
+              location=regionId
             /]
 
           [/#if]
@@ -164,7 +197,7 @@
 
           [#local ruleId = rule.Id]
           [#local ruleConfig = solution.Rules[id]]
-          [#local ruleAction = ruleConfig.Action]
+          [#local ruleAction = ruleConfig.Action?cap_first]
 
           [#if (ruleConfig.Source.IPAddressGroups)?seq_contains("_localnet")
             && (ruleConfig.Source.IPAddressGroups)?size == 1 ]
@@ -192,25 +225,48 @@
             /]
           [/#if]
 
+          [#-- format port ranges as string type --]
+          [#if sourcePort?is_string]
+            [#local sourcePort = sourcePort?replace("any", "*")]
+          [#else]
+            [#local sourcePort = sourcePort.PortRange.From?string?replace(",", "") + "-" + sourcePort.PortRange.To?string?replace(",", "")]
+          [/#if]
+
+          [#if destinationPort?is_string]
+            [#local destinationPort = destinationPort?replace("any", "*")]
+          [#else]
+            [#local destinationPort = destinationPort.PortRange.From?string?replace(",", "") + "-" + destinationPort.PortRange.To?string?replace(",", "")]
+          [/#if]
           [#-- NSG's are Stateful, so do not require rules for return traffic.
           
           Here we also make use of the ability to pass an array of source/destination
           addresses to the same rule. --]
-          [#local ruleOrder = ruleConfig.Priority + ipAddress?index]
-          [#local description = rule.Action?cap_first + destinationIPAddresses?cap_first + direction?cap_first]
+          [#list destinationIPAddresses![] as ipAddress]
+            [#local ruleOrder = ruleConfig.Priority + ipAddress?index]
+            [#local description = ruleConfig.Action?cap_first + " " + ipAddress + " " + direction?cap_first]
 
-          [@createNetworkSecurityGroupSecurityRule
-            name=formatId(ruleId,direction,ruleOrder)
-            description=description
-            protocol="*"
-            sourcePortRange=(sourcePort?replace("any","*"))
-            destinationPortRange=(destinationPort?replace("any","*"))
-            sourceAddressPrefixes=sourceIpAddresses
-            destinationAddressPrefixes=destinationIPAddresses
-            access=ruleAction
-            priority=ruleOrder
-            direction=direction
-          /]
+            [@createNetworkSecurityGroupSecurityRule
+              id=formatDependentSecurityRuleId(vnetId, description)
+              name=formatAzureResourceName(
+                formatName(ruleConfig.Action,direction,ruleOrder),
+                getResourceType(formatDependentSecurityRuleId(vnetId, formatName(ruleId,direction,ruleOrder))),
+                networkSecurityGroupName)
+              nsgName=networkSecurityGroupName
+              description=description
+              protocol="*"
+              sourcePortRange=sourcePort
+              destinationPortRange=destinationPort
+              sourceAddressPrefixes=sourceIpAddresses
+              destinationAddressPrefixes=destinationIPAddresses
+              access=ruleAction
+              priority=ruleOrder
+              direction=direction
+              dependsOn=
+                [
+                  getReference(networkSecurityGroupId, networkSecurityGroupName)
+                ]
+            /]
+          [/#list]
         [/#list]
       [/#if]
     [/#list]
@@ -224,6 +280,7 @@
     [#if (resources["flowlogs"]!{})?has_content]
       [#local flowLogResources = resources["flowlogs"]]
       [#local flowLogNSGId = flowLogResources["networkWatcherFlowlog"].Id]
+      [#local flowLogNSGName = flowLogResources["networkWatcherFlowlog"].Name]
 
       [#local flowLogStorageId = getReference(
         formatResourceId(
@@ -233,7 +290,8 @@
       )]
 
       [@createNetworkWatcherFlowLog
-        name=flowLogNSGId
+        id=flowLogNSGId
+        name=flowLogNSGName
         targetResourceId=networkSecurityGroupId
         storageId=flowLogStorageId
         enabled=true
@@ -244,7 +302,7 @@
         formatVersion="0"
         dependsOn=
           [
-            flowLogStorageId
+            getReference(flowLogStorageId)
           ]
       /]
     [/#if]
