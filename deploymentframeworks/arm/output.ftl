@@ -93,6 +93,7 @@
     sku={}
     kind=""
     plan={}
+    zones=[]
     resources=[]
     parentNames=[]
     outputs={}]
@@ -137,6 +138,7 @@
             attributeIfContent("sku", sku) +
             attributeIfContent("kind", kind) +
             attributeIfContent("plan", plan) +
+            attributeIfContent("zones", zones) +
             attributeIfContent("resources", resources)
         ]
     /]
