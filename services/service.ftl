@@ -16,6 +16,9 @@
 [#-- Microsoft.Compute --]
 [#assign AZURE_VIRTUALMACHINE_SERVICE = "microsoft.compute"]
 
+[#-- Microsoft.Insights --]
+[#assign AZURE_INSIGHTS_SERVICE = "microsoft.insights"]
+
 [#-- Microsoft.KeyVault --]
 [#assign AZURE_KEYVAULT_SERVICE = "microsoft.keyvault"]
 
