@@ -457,3 +457,45 @@
     dependsOn=dependsOn
   /]
 [/#macro]
+
+[#-- 
+  The nicConfigurationReference & getIPConfigurationReference objects allow for the reference to an
+  existing NIC resource. It is not intended for use during the creation of a NIC.
+--]
+[#function getIPConfigurationReference
+  publicIPId
+  publicIPName
+  subnetId]
+
+  [#return
+    {
+      "id" : publicIPId,
+      "name" : publicIPName,
+      "properties" : {
+        "subnet" : {
+          "id" : subnetId
+        }
+      }
+    }
+  ]
+
+[/#function]
+
+[#function getNICConfigurationReference
+  nicId
+  nicName
+  ipConfigurations=[]
+  primary=true]
+
+  [#return
+    {
+      "id" : nicId,
+      "name" : nicName,
+      "properties" : {
+        "primary" : primary,
+        "ipConfigurations" : ipConfigurations
+      }
+    }
+  ]
+
+[/#function]
