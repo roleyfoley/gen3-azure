@@ -101,18 +101,14 @@
   id
   name
   nsgName
-  protocol
   access
   direction
   sourceAddressPrefix=""
   sourceAddressPrefixes=[]
-  sourcePortRange=""
-  sourcePortRanges=[]
   sourceApplicationSecurityGroups=[]
-  destinationPortRange=""
-  destinationPortRanges=[]
+  destinationPortProfileName=""
   destinationAddressPrefix=""
-  destinationAddressPrefixes=""
+  destinationAddressPrefixes=[]
   destinationApplicationSecurityGroups=[]
   description=""
   priority=4096
@@ -120,6 +116,19 @@
   outputs={}
   dependsOn=[]]
 
+  [#local destinationPortProfile = ports[destinationPortProfileName]]
+  [#if destinationPortProfileName == "any"]
+    [#local destinationPort = "*"]
+  [#else]
+    [#local destinationPort = isPresent(destinationPortProfile.PortRange)?then(
+      destinationPortProfile.PortRange.From + "-" + destinationPortProfile.PortRange.To,
+      destinationPortProfile.Port)]
+  [/#if]
+
+  [#--
+    Azure will generate alerts if you provide source-port range/s as port filtering is
+    primarily on the destination. Their recommendation is to specify "any" ("*") port.
+  --]
   [@armResource
     id=id
     name=name
@@ -130,17 +139,15 @@
       {
         "access" : access,
         "direction" : direction,
-        "protocol" : protocol
+        "protocol" : destinationPortProfile.IPProtocol?replace("all", "*"),
+        "sourcePortRange": "*"
       } +
-      attributeIfContent("sourceAddressPrefix", sourceAddressPrefix) +
-      attributeIfContent("sourceAddressPrefixes", sourceAddressPrefixes) +
-      attributeIfContent("sourcePortRange", sourcePortRange) +
-      attributeIfContent("sourcePortRanges", sourcePortRanges) +
+      attributeIfContent("sourceAddressPrefix", formatAzureIPAddress(sourceAddressPrefix)) +
+      attributeIfContent("sourceAddressPrefixes", formatAzureIPAddresses(sourceAddressPrefixes)) +
       attributeIfContent("sourceApplicationSecurityGroups", sourceApplicationSecurityGroups) +
-      attributeIfContent("destinationPortRange", destinationPortRange) +
-      attributeIfContent("destinationPortRanges", destinationPortRanges) +
-      attributeIfContent("destinationAddressPrefix", destinationAddressPrefix) +
-      attributeIfContent("destinationAddressPrefixes", destinationAddressPrefixes) +
+      attributeIfContent("destinationPortRange", destinationPort) +
+      attributeIfContent("destinationAddressPrefix", formatAzureIPAddress(destinationAddressPrefix)) +
+      attributeIfContent("destinationAddressPrefixes", formatAzureIPAddresses(destinationAddressPrefixes)) +
       attributeIfContent("destinationApplicationSecurityGroups", destinationApplicationSecurityGroups) +
       attributeIfContent("description", description) +
       attributeIfContent("priority", priority)

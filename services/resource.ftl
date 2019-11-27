@@ -208,6 +208,28 @@ its own function to return the first split of the last segment --]
     [#return resourceId?split("/")?last?split("X")[0]]
 [/#function]
 
+[#-- 
+    Azure has some default tags to reference standard IP ranges.
+    We use that here as Azure does not accept 0.0.0.0/0 as reference to Internet.
+--]
+[#function formatAzureIPAddress ip]
+    [#local result = ""]
+    [#if ip?has_content]
+        [#local result = ip?replace("0.0.0.0/0", "Internet")]
+    [/#if]
+    [#return result]
+[/#function]
+
+[#function formatAzureIPAddresses ipAddresses...]
+    [#local result = []]
+    [#list ipAddresses as ip]
+        [#if ip?has_content]
+            [#local result += [formatAzureIPAddress(ip)]]
+        [/#if]
+    [/#list]
+    [#return result]
+[/#function]
+
 [#-------------------------------------------------------
 -- Internal support functions for resource processing --
 ---------------------------------------------------------]

@@ -6,11 +6,8 @@
   [#local solution = occurrence.Configuration.Solution]
 
   [#local vnetId = formatVirtualNetworkId(core.Id)]
-  [#local vnetName = core.FullName]
+  [#local vnetName = core.ShortTypedFullName]
   [#local nsgId = formatDependentNetworkSecurityGroupId(vnetId)]
-  [#local nsgName = formatName(core.Name)]
-  [#local nsgFlowlogId = formatDependentNetworkWatcherId(nsgId)]
-  [#local nsgFlowlogName = formatName(core.Name)]
 
   [#local nsgFlowLogEnabled = environmentObject.Operations.FlowLogs.Enabled!
     segmentObject.Operations.FlowLogs.Enabled!
@@ -19,52 +16,60 @@
   [#local networkCIDR = (network.CIDR)?has_content?then(
     network.CIDR.Address + "/" + network.CIDR.Mask,
     solution.Address.CIDR )]
+    
+  [#local networkAddress = networkCIDR?split("/")[0]]
+  [#local networkMask = (networkCIDR?split("/")[1])?number]
 
-  [#local networkAddress = networkCIDR?split("/")[0] ]
-  [#local networkMask = (networkCIDR?split("/")[1])?number ]
-  [#local baseAddress = networkAddress?split(".") ]
+  [#local subnetCIDRMask = getSubnetMaskFromSizes(
+    networkCIDR,
+    network.Tiers.Order?size)]
 
-  [#local addressOffset = baseAddress[2]?number*256 + baseAddress[3]?number]
-  [#local addressesPerTier = powersOf2[getPowerOf2(powersOf2[32 - networkMask]/(network.Tiers.Order?size))]]
-  [#local addressesPerZone = powersOf2[getPowerOf2(addressesPerTier / (network.Zones.Order?size))]]
-  [#local subnetMask = 32 - powersOf2?seq_index_of(addressesPerZone)]
+  [#local subnetCIDRs = getSubnetsFromNetwork(
+    networkCIDR,
+    subnetCIDRMask)]
 
-  [#-- Define subnets --]
+  [#-- Define subnets /w routeTableRoutes --]
   [#local subnets = {}]
+  [#local routeTableRoutes = {}]
   [#list segmentObject.Network.Tiers.Order as tierId]
+  
     [#local networkTier = getTier(tierId) ]
-
     [#-- Filter out to only valid tiers --]
-    [#if ! (networkTier?has_content && networkTier.Network.Enabled &&
-                networkTier.Network.Link.Tier == core.Tier.Id && networkTier.Network.Link.Component == core.Component.Id &&
-                (networkTier.Network.Link.Version!core.Version.Id) == core.Version.Id && (networkTier.Network.Link.Instance!core.Instance.Id) == core.Instance.Id)]
-        [#continue]
+    [#if ! (networkTier?has_content && 
+            networkTier.Network.Enabled &&
+            networkTier.Network.Link.Tier == core.Tier.Id && 
+            networkTier.Network.Link.Component == core.Component.Id &&
+            (networkTier.Network.Link.Version!core.Version.Id) == core.Version.Id && 
+            (networkTier.Network.Link.Instance!core.Instance.Id) == core.Instance.Id)]
+      [#continue]
     [/#if]
 
-    [#list zones as zone]
-      [#local subnetId = formatDependentSubnetId(core.Id, networkTier.Id, zone.Id)]
-      [#local subnetName = formatName(networkTier.Name, zone.Name)]
-      [#local subnetAddress = addressOffset + (networkTier.Network.Index * addressesPerTier) + (zone.Index * addressesPerZone)]
-      [#local subnetCIDR = baseAddress[0] + "." + baseAddress[1] + "." + (subnetAddress/256)?int + "." + subnetAddress%256 + "/" + subnetMask]
-      [#local routeId = formatDependentRouteTableRouteId(subnetId)]
-
-      [#local subnets =  mergeObjects( subnets, {
+    [#local subnets = mergeObjects(
+      subnets,
+      {
         networkTier.Id : {
-          zone.Id : {
-            "subnet" : {
-              "Id" : subnetId,
-              "Name" : subnetName,
-              "Address" : subnetCIDR,
-              "Type" : AZURE_SUBNET_RESOURCE_TYPE
-            },
-            "routeTableRoute" : {
-              "Id" : routeId,
-              "Type" : AZURE_ROUTE_TABLE_ROUTE_RESOURCE_TYPE
-            }
+          "subnet": {
+            "Id": formatDependentResourceId(AZURE_SUBNET_RESOURCE_TYPE, networkTier.Id),
+            "Name": networkTier.Name,
+            "Address": subnetCIDRs[tierId?index],
+            "Type": AZURE_SUBNET_RESOURCE_TYPE
           }
         }
-      })]
-    [/#list]
+      }
+    )]
+
+    [#local routeTableRoutes = mergeObjects(
+      routeTableRoutes, 
+      {
+        networkTier.Id : {
+          "routeTableRoute" : {
+            "Id" : formatDependentResourceId(AZURE_ROUTE_TABLE_ROUTE_RESOURCE_TYPE, networkTier.Name),
+            "Name" : formatName(AZURE_ROUTE_TABLE_ROUTE_RESOURCE_TYPE, networkTier.Id),
+            "Type" : AZURE_ROUTE_TABLE_ROUTE_RESOURCE_TYPE
+          }
+        }
+      }
+    )]
   [/#list]
 
   [#assign componentState =
@@ -77,9 +82,10 @@
           "Type" : AZURE_VIRTUAL_NETWORK_RESOURCE_TYPE
         },
         "subnets" : subnets,
+        "routeTableRoutes" : routeTableRoutes,
         "networkSecurityGroup" : {
           "Id" : nsgId,
-          "Name" : nsgName,
+          "Name" : formatName(vnetName, AZURE_VIRTUAL_NETWORK_SECURITY_GROUP_RESOURCE_TYPE),
           "Type" : AZURE_VIRTUAL_NETWORK_SECURITY_GROUP_RESOURCE_TYPE
         }
       } +
@@ -88,8 +94,8 @@
         nsgFlowLogEnabled, 
         {
           "networkWatcherFlowlog" : { 
-            "Id" : nsgFlowlogId,
-            "Name" : nsgFlowlogName,
+            "Id" : formatDependentNetworkWatcherId(nsgId),
+            "Name" : formatName(vnetName, AZURE_NETWORK_WATCHER_RESOURCE_TYPE),
             "Type" : AZURE_NETWORK_WATCHER_RESOURCE_TYPE
           }
         }
@@ -104,49 +110,41 @@
 [/#macro]
 
 [#macro azure_networkroute_arm_state occurrence parent={} baseState={}]
-
   [#local core = occurrence.Core]
   [#local solution = occurrence.Configuration.Solution]
 
-  [#local routeTableId = formatDependentRouteTableId(core.Id)]
-
-  [#local routeTables = {}]
-  [#list segmentObject.Network.Tiers.Order as tierId]
-    
-    [#-- Filter out to only valid tiers --]
-    [#local networkTier = getTier(tierId) ]
-    [#if ! (networkTier?has_content && networkTier.Network.Enabled)]
-        [#continue]
-    [/#if]
-
-    [#list zones as zone]
-      [#local zoneRouteTableId = formatId(routeTableId, zone.Id)]
-      [#local zoneRouteTableName = formatName(routeTableId, zone.Id)]
-
-      [#local routeTables = mergeObjects(routeTables, {
-        zone.Id : {
+  [#--
+    The routeTable known as "default" refers to the Microsoft managed routeTable.
+   --]
+  [#if ! (core.SubComponent.Name == "default") ]
+    [#assign componentState =
+      {
+        "Resources" : {
           "routeTable" : {
-            "Id" : zoneRouteTableId,
-            "Name" : zoneRouteTableName,
+            "Id" : formatDependentResourceId(AZURE_ROUTE_TABLE_RESOURCE_TYPE, core.Id),
+            "Name" : formatName(AZURE_ROUTE_TABLE_RESOURCE_TYPE, core.ShortName),
             "Type" : AZURE_ROUTE_TABLE_RESOURCE_TYPE
           }
+        },
+        "Attributes" : {},
+        "Roles" : {
+            "Inbound" : {},
+            "Outbound" : {}
         }
-      })]
-    [/#list]
-  [/#list]
-
-  [#assign componentState =
-    {
-      "Resources" : {
-        "routeTables" : routeTables
-      },
-      "Attributes" : {},
-      "Roles" : {
-          "Inbound" : {},
-          "Outbound" : {}
       }
-    }
-  ]
+    ]
+  [#else]
+    [#assign componentState =
+      {
+        "Resources" : {},
+        "Attributes" : {},
+        "Roles" : {
+            "Inbound" : {},
+            "Outbound" : {}
+        }
+      }
+    ]
+  [/#if]
 [/#macro]
 
 [#-- As a subcomponent, this NetworkACL is using a NetworkSecurityGroup
@@ -159,37 +157,9 @@ as Azure does not have NetworkACLs.--]
   [#local core = occurrence.Core]
   [#local solution = occurrence.Configuration.Solution]
 
-  [#local vnetId = formatVirtualNetworkId(core.Id)]
-  [#local nsgId = formatDependentNetworkSecurityGroupId(vnetId)]
-
-  [#list segmentObject.Network.Tiers.Order as tierId]
-  
-    [#-- Filter out to only valid tiers --]
-    [#local networkTier = getTier(tierId) ]
-    [#if ! (networkTier?has_content && networkTier.Network.Enabled)]
-        [#continue]
-    [/#if]
-
-    [#list zones as zone]
-
-      [#local networkSecurityGroupRules = {}]
-      [#list solution.Rules as id, rule]
-        [#local networkSecurityGroupRules += {
-          rule.Id : {
-            "Id" : formatDependentSecurityRuleId(nsgId, rule.Id),
-            "Type" : AZURE_VIRTUAL_NETWORK_SECURITY_GROUP_SECURITY_RULE_RESOURCE_TYPE
-          }
-        }]
-      [/#list]
-
-    [/#list]
-  [/#list]
-
   [#assign componentState =
     {
-      "Resources" : {
-        "rules" : networkSecurityGroupRules
-      },
+      "Resources" : {},
       "Attributes" : {},
       "Roles" : {
         "Inbound" : {},
