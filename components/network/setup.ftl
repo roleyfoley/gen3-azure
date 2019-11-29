@@ -93,6 +93,45 @@
           ]]
         [/#if]
 
+        [#-- Retrieve the NetworkEndpoint's from the Gateway component and prepare the Management Tier subnet for them --]
+        [#local networkEndpointGroups = []]
+        [#list solution.Links?values as link]
+          [#if link?is_hash]
+
+            [#local linkTarget = getLinkTarget(occurrence, link + { "Destination" : "default" }, false)]
+
+            [#if !linkTarget?has_content]
+              [#continue]
+            [/#if]
+
+            [#local linkTargetConfiguration = linkTarget.Configuration]
+
+            [#switch linkTarget.Core.Type]
+              [#case NETWORK_GATEWAY_DESTINATION_COMPONENT_TYPE]
+                [#if linkTarget.State.Attributes.Engine = "vpcendpoint"]
+                  [#local linkNetworkEndpointGroups = linkTargetConfiguration.Solution.NetworkEndpointGroups]
+                  [#list linkNetworkEndpointGroups as group]
+                    [#if !networkEndpointGroups?seq_contains(group)]
+                      [#local networkEndpointGroups += [group]]
+                    [/#if]
+                  [/#list]
+                [/#if]
+                [#break]
+            [/#switch]
+
+          [/#if]    
+        [/#list]
+
+        [#local networkEndpoints = getNetworkEndpoints(networkEndpointGroups, "a", region)]
+
+        [#local serviceEndpoints = []]
+        [#local serviceEndpointPolicies = []]
+        [#if tierId == "mgmt"]
+          [#list networkEndpoints?keys as endpointId]
+            [#local serviceEndpoints += [getSubnetServiceEndpoint(endpointId, [region])]]
+          [/#list]
+        [/#if]
+   
         [#if routeTableResource?has_content]
           [#local routeTableId = routeTableResource.Id]
           [#local routeTableName = routeTableResource.Name] 
@@ -104,7 +143,8 @@
             vnetName=vnetName
             addressPrefix=subnet.Address
             networkSecurityGroup={ "id" : getReference(networkSecurityGroupId, networkSecurityGroupName) }
-            routeTable= { "id" : getReference(routeTableId, routeTableName) }     
+            routeTable= { "id" : getReference(routeTableId, routeTableName) }
+            serviceEndpoints=serviceEndpoints
             dependsOn=dependencies
           /]
         [#else]
@@ -113,7 +153,8 @@
             name=subnetName
             vnetName=vnetName
             addressPrefix=subnet.Address
-            networkSecurityGroup={ "id" : getReference(networkSecurityGroupId, networkSecurityGroupName) } 
+            networkSecurityGroup={ "id" : getReference(networkSecurityGroupId, networkSecurityGroupName) }
+            serviceEndpoints=serviceEndpoints
             dependsOn=dependencies
           /]
         [/#if]

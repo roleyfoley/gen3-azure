@@ -12,7 +12,13 @@
             "a": {
               "Title": "Zone A",
               "Description": "Zone A",
-              "AzureId": "eastus"
+              "AzureId": "eastus",
+              "NetworkEndpoints": [
+                {
+                  "Type": "Interface",
+                  "ServiceName": "Microsoft.Storage"
+                }
+              ]
             }
           },
           "Accounts": {}
@@ -225,6 +231,15 @@
                       }
                     }
                   }
+                },
+                "Links": {
+                  "NetworkEndpoints": {
+                    "Tier": "mgmt",
+                    "Component": "vpcendpoint",
+                    "Version": "",
+                    "Instance": "",
+                    "Destination" : "default"
+                  }
                 }
               }
             },
@@ -411,7 +426,31 @@
         }
       },
       "LogFilters": {},
-      "NetworkEndpointGroups": {},
+      "NetworkEndpointGroups": {
+        "compute" : {
+          "Services" : []
+        },
+        "security" : {
+          "Services" : []
+        },
+        "configurationMgmt" : {
+          "Services" : []
+        },
+        "containers" : {
+          "Services" : []
+        },
+        "serverless" : {
+          "Services" : []
+        },
+        "logs" : {
+          "Services" : []
+        },
+        "storage" : {
+          "Services" : [
+            "Microsoft.Storage"
+          ]
+        }
+      },
       "DeploymentProfiles": {
         "default": {
           "Modes": {
