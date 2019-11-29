@@ -230,6 +230,58 @@ its own function to return the first split of the last segment --]
     [#return result]
 [/#function]
 
+[#function getAzServiceEndpoint serviceName serviceType resourceName extensions...]
+
+    [#local endpoints = {}]
+    [#switch serviceName]
+        [#case "Microsoft.ContainerRegistry"]
+            [#local endpoints =
+                {
+                    "containerRegistry" : "azurecr.io"
+                }
+            ]
+            [#break]
+        [#case "Microsoft.KeyVault"]
+            [#local endpoints =
+                {
+                    "vault" : "vault.azure.net/"
+                }
+            ]
+            [#break]
+        [#case "Microsoft.Storage"]
+            [#local endpoints = 
+                {
+                    "blob"  : "blob.core.windows.net/",
+                    "dfs"   : "dfs.core.windows.net/",
+                    "file"  : "file.core.windows.net/",
+                    "queue" : "queue.core.windows.net/",
+                    "table" : "table.core.windows.net/",
+                    "web"   : "web.core.windows.net/"
+                }
+            ]
+        [#default]
+            [@fatal
+                message="Unsupported Azure Endpoint Service specified."
+                context=
+                    {
+                        "serviceName" : serviceName,
+                        "serviceType" : serviceType,
+                        "resourceName" : resourceName,
+                        "extensions" : extensions
+                    }
+            /]
+    [/#switch]
+
+    [#local endpoint = 
+        "https://" +
+        resourceName +
+        extensions?join(".")?ensure_starts_with(".")?ensure_ends_with(".") +
+        endpoints[serviceType]
+    ]
+
+    [#return endpoint]
+
+[/#function]
 [#-------------------------------------------------------
 -- Internal support functions for resource processing --
 ---------------------------------------------------------]
