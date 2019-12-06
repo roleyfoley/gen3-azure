@@ -1,0 +1,22 @@
+[#ftl]
+[@addResourceGroupInformation
+  type=NETWORK_GATEWAY_COMPONENT_TYPE
+  attributes=[]
+  provider=AZURE_PROVIDER
+  resourceGroup=DEFAULT_RESOURCE_GROUP
+  services=
+    [
+      AZURE_NETWORK_SERVICE
+    ]
+/]
+
+[@addResourceGroupInformation
+  type=NETWORK_GATEWAY_DESTINATION_COMPONENT_TYPE
+  attributes=[]
+  provider=AZURE_PROVIDER
+  resourceGroup=DEFAULT_RESOURCE_GROUP
+  services=
+    [
+      AZURE_NETWORK_SERVICE
+    ]
+/]

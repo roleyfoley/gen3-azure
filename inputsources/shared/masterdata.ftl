@@ -22,6 +22,19 @@
             }
           },
           "Accounts": {}
+        },
+        "global": {
+          "Partitian": "azure",
+          "Locality": "UnitedStates",
+          "Zones": {
+            "a": {
+              "Title": "Global",
+              "Description": "A Global Zone",
+              "AzureId": "global",
+              "NetworkEndpoints": []
+            }
+          },
+          "Accounts": {}
         }
       },
       "Tiers": {
