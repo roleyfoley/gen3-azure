@@ -1,6 +1,6 @@
 [#ftl]
 
-[#macro azure_input_mock_stackoutput region="" account="" resourceGroup="" deploymentUnit="" deploymentMode=""]
+[#macro azure_input_mock_stackoutput id="" deploymentUnit="" level="" region="" account=""]
 
   [#switch id?split("X")?last ]
     [#case NAME_ATTRIBUTE_TYPE]
