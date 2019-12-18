@@ -34,7 +34,7 @@
         [@addToDefaultBashScriptOutput
           content=
           [
-            "case $\{STACK_OPERATION} in",
+            "case $\{DEPLOYMENT_OPERATION} in",
             "  create|update)"
           ] +
           pseudoArmStackOutputScript(
@@ -251,7 +251,7 @@
                   "# Determine the required key pair name",
                   "key_pair_name=\"" + keyPairName + "\"",
                   "#",
-                  "case $\{STACK_OPERATION} in",
+                  "case $\{DEPLOYMENT_OPERATION} in",
                   "  delete)",
                   "    az_delete_key_credentials " + " " +
                     "\"" + keyVaultName + "\" " +
@@ -333,7 +333,7 @@
                   "# Determine the required key pair name",
                   "key_pair_name=\"" + vmKeyPairName + "\"",
                   "#",
-                  "case $\{STACK_OPERATION} in",
+                  "case $\{DEPLOYMENT_OPERATION} in",
                   "  delete)",
                   "    az_delete_key_credentials " + " " +
                     "\"" + vmKeyVaultName + "\" " +
