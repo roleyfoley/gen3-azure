@@ -1,12 +1,10 @@
 [#ftl]
+[#macro azure_network_arm_genplan_segment occurrence]
+  [@addDefaultGenerationPlan subsets="template" /]
+[/#macro]
 
-[#macro azure_network_arm_segment occurrence]
+[#macro azure_network_arm_setup_segment occurrence]
   [@debug message="Entering" context=occurrence enabled=false /]
-
-  [#if deploymentSubsetRequired("genplan", false)]
-      [@addDefaultGenerationPlan subsets="template" /]
-      [#return]
-  [/#if]
 
   [#local core = occurrence.Core]
   [#local solution = occurrence.Configuration.Solution]
@@ -44,7 +42,7 @@
 
         [#local networkTier = getTier(tierId)]
         [#local tierNetwork = getTierNetwork(tierId)]
-        
+
         [#local networkLink = tierNetwork.Link!{}]
         [#local routeTableId = tierNetwork.RouteTable!""]
         [#local networkACLId = tierNetwork.NetworkACL!""]
@@ -61,18 +59,18 @@
               }
           /]
         [/#if]
-        
+
         [#local routeTableLink = getLinkTarget(occurrence, networkLink + { "RouteTable" : routeTableId }, false)]
         [#local networkACLLink = getLinkTarget(occurrence, networkLink + { "NetworkACL" : networkACLId }, false)]
         [#local routeTableResource = routeTableLink.State.Resources["routeTable"]!{}]
-  
+
         [#local subnet = subnets.subnet]
         [#local subnetIndex = subnets?index]
         [#local subnetName = formatAzureResourceName(
           subnet.Name,
           getResourceType(subnet.Id),
           vnetName)]
-        
+
         [#-- Determine dependencies --]
         [#local dependencies = [
             getReference(vnetId, vnetName),
@@ -119,7 +117,7 @@
                 [#break]
             [/#switch]
 
-          [/#if]    
+          [/#if]
         [/#list]
 
         [#local networkEndpoints = getNetworkEndpoints(networkEndpointGroups, "a", region)]
@@ -131,10 +129,10 @@
             [#local serviceEndpoints += [getSubnetServiceEndpoint(endpointId, [region])]]
           [/#list]
         [/#if]
-   
+
         [#if routeTableResource?has_content]
           [#local routeTableId = routeTableResource.Id]
-          [#local routeTableName = routeTableResource.Name] 
+          [#local routeTableName = routeTableResource.Name]
           [#local dependencies += [getReference(routeTableId, routeTableName)]]
 
           [@createSubnet
@@ -163,7 +161,7 @@
 
         [#list networkACLConfiguration.Rules as ruleId, ruleConfig]
 
-          [#-- 
+          [#--
             Rules are Subnet-specific.
             Where an IPAddressGroup is found to be _localnet, use the subnet CIDR instead.
           --]

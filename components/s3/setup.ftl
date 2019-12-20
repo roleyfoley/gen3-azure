@@ -1,11 +1,9 @@
 [#ftl]
+[#macro azure_s3_arm_genplan_solution occurrence]
+    [@addDefaultGenerationPlan subsets="template" /]
+[/#macro]
 
-[#macro azure_s3_arm_solution occurrence]
-
-    [#if deploymentSubsetRequired("genplan", false)]
-        [@addDefaultGenerationPlan subsets="template" /]
-        [#return]
-    [/#if]
+[#macro azure_s3_arm_setup_solution occurrence]
 
     [#local core = occurrence.Core ]
     [#local solution = occurrence.Configuration.Solution ]
@@ -27,7 +25,7 @@
 
     [#local storageProfile = getStorage(occurrence, "storageAccount")]
 
-    [#-- Baseline component lookup 
+    [#-- Baseline component lookup
     [#local baselineLinks = getBaselineLinks(occurrence, [ "CDNOriginKey" ])]
     [#local baselineComponentIds = getBaselineComponentIds(baselineLinks)]
     --]
@@ -65,7 +63,7 @@
 
     [#local ipRulesConfiguration = []]
     [#local networkAclsConfiguration = getStorageNetworkAcls("Deny", ipRulesConfiguration, virtualNetworkRulesConfiguration, "None")]
-    
+
     [#-- Retrieve Certificate Information --]
     [#if solution.Certificate?has_content]
         [#local certificateObject = getCertificateObject(solution.Certificate, segmentQualifiers, sourcePortId, sourcePortName) ]
@@ -74,7 +72,7 @@
     [#else]
         [#local fqdn = ""]
     [/#if]
-    
+
     [#if deploymentSubsetRequired("s3", true)]
 
         [#-- TODO(rossmurr4y): Impliment tags. Currently the shared function getOccurrenceCoreTags
@@ -99,7 +97,7 @@
             isHnsEnabled=(storageProfile.HnsEnabled!false)
         /]
 
-        [@createBlobService 
+        [@createBlobService
             id=blobId
             name=blobName
             accountName=accountName
@@ -117,7 +115,7 @@
                 ]
         /]
 
-        [@createBlobServiceContainer 
+        [@createBlobServiceContainer
             id=containerId
             name=containerName
             accountName=accountName
@@ -127,7 +125,7 @@
                 [
                     getReference(accountId, accountName),
                     getReference(blobId, blobName)
-                ]      
+                ]
         /]
 
     [/#if]

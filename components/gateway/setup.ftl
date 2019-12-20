@@ -1,17 +1,16 @@
 [#ftl]
-[#-- 
+[#--
   Currently, all the typical Gateway resources have been created within the
   Network component due to Azure specific requirements. The Gateway will
-  be utilised in a greater capacity when it comes to implimenting 
+  be utilised in a greater capacity when it comes to implimenting
   privateEndpoint resources. Leaving large portions of the macro
   intact so as to outline the future structure.
 --]
-[#macro azure_gateway_arm_segment occurrence]
+[#macro azure_gateway_arm_genplan_segment occurrence]
+  [@addDefaultGenerationPlan subsets="template" /]
+[/#macro]
 
-  [#if deploymentSubsetRequired("genplan", false)]
-    [@addDefaultGenerationPlan subsets="template" /]
-    [#return]
-  [/#if]
+[#macro azure_gateway_arm_setup_segment occurrence]
 
   [#local gwCore = occurrence.Core]
   [#local gwSolution = occurrence.Configuration.Solution]
@@ -50,12 +49,12 @@
     [#local dnsZoneLinkId = gwResources["vnetLink"].Id]
     [#local dnsZoneLinkName = formatAzureResourceName(gwResources["vnetLink"].Name, getResourceType(dnsZoneLinkId), dnsZoneName)]
 
-    [@createPrivateDnsZone 
+    [@createPrivateDnsZone
       id=dnsZoneId
       name=dnsZoneName
     /]
 
-    [@createPrivateDnsZoneVnetLink 
+    [@createPrivateDnsZoneVnetLink
       id=dnsZoneLinkId
       name=dnsZoneLinkName
       vnetId=getReference(networkResources["vnet"].Id, networkResources["vnet"].Name)

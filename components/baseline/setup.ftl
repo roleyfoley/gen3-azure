@@ -1,11 +1,9 @@
 [#ftl]
+[#macro azure_baseline_arm_genplan_segment occurrence]
+  [@addDefaultGenerationPlan subsets=["prologue", "template", "epilogue"] /]
+[/#macro]
 
-[#macro azure_baseline_arm_segment occurrence]
-
-    [#if deploymentSubsetRequired("genplan", false)]
-      [@addDefaultGenerationPlan subsets=["prologue", "template", "epilogue"] /]
-      [#return]
-    [/#if]
+[#macro azure_baseline_arm_setup_segment occurrence]
 
     [#local core = occurrence.Core ]
     [#local solution = occurrence.Configuration.Solution ]
@@ -73,7 +71,7 @@
     [#-- Process Resource Naming Conditions --]
     [#local accountName = formatAzureResourceName(accountName, getResourceType(accountId))]
     [#local blobName = formatAzureResourceName(blobName, getResourceType(blobId), accountName)]
-    
+
     [#local storageProfile = getStorage(occurrence, "storageAccount")]
 
     [#-- storageAccount : Retrieve Certificate Information --]
@@ -85,7 +83,7 @@
         [#local fqdn = ""]
     [/#if]
 
-    [#-- 
+    [#--
       storageAccount + keyVault : Retrieve NetworkACL Configuration
       Component roles will grant more explicit access to Storage + KeyVault.
       For now we just want blanket "deny-all" networkAcls.
@@ -177,7 +175,7 @@
             blobName=blobName
             publicAccess=publicAccess
             dependsOn=
-              [ 
+              [
                 getReference(accountId, accountName),
                 getReference(blobId, blobName)
               ]
@@ -201,7 +199,7 @@
             [#if deploymentSubsetRequired("epilogue")]
 
               [#-- Generate & Import CMK into keyvault --]
-              [@addToDefaultBashScriptOutput 
+              [@addToDefaultBashScriptOutput
                 content=[
                   "function az_manage_cmk_credentials() {"
                   "  info \"Checking CMK credentials ...\"",
@@ -283,7 +281,7 @@
             [#if deploymentSubsetRequired("epilogue")]
 
               [#-- Generate & Import SSH credentials into keyvault --]
-              [@addToDefaultBashScriptOutput 
+              [@addToDefaultBashScriptOutput
                 content=[
                   "function az_manage_ssh_credentials() {"
                   "  info \"Checking SSH credentials ...\"",
